@@ -1,0 +1,6 @@
+*.txt
+*.txt.gz
+*.svg
+meta.*
+out.*
+README.*
