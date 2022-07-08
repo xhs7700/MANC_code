@@ -1,0 +1,9 @@
+# UnweightedGraph graph: small-graph
+# Nodes: 6 Edges: 7
+1 2
+1 5
+2 4
+2 6
+3 4
+4 5
+5 6

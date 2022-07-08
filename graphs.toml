@@ -1,0 +1,301 @@
+[small-graph]
+name = "small-graph"
+file_name = "small-graph"
+is_weighted = false
+total_n = 6
+total_m = 7
+LCC_n = 6
+LCC_m = 7
+dir_name = "data/"
+source = "SELF"
+
+[Zachary_karate_club]
+name = "Zachary karate club"
+file_name = "Zachary_karate_club"
+internal_name = "ucidata-zachary"
+is_weighted = false
+total_n = 34
+total_m = 78
+LCC_n = 34
+LCC_m = 78
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.ucidata-zachary.tar.bz2"
+
+[Contiguous_USA]
+name = "Contiguous USA"
+file_name = "Contiguous_USA"
+internal_name = "contiguous-usa"
+is_weighted = false
+total_n = 49
+total_m = 107
+LCC_n = 49
+LCC_m = 107
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.contiguous-usa.tar.bz2"
+
+[Dolphins]
+name = "Dolphins"
+file_name = "Dolphins"
+internal_name = "dolphins"
+is_weighted = false
+total_n = 62
+total_m = 159
+LCC_n = 62
+LCC_m = 159
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.dolphins.tar.bz2"
+
+[Train_bombing]
+name = "Train bombing"
+file_name = "Train_bombing"
+internal_name = "moreno_train"
+is_weighted = true
+total_n = 64
+total_m = 243
+LCC_n = 64
+LCC_m = 243
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.moreno_train.tar.bz2"
+
+[Les_Miserables]
+name = "Les Misérables"
+file_name = "Les_Miserables"
+internal_name = "moreno_lesmis"
+is_weighted = true
+total_n = 77
+total_m = 254
+LCC_n = 77
+LCC_m = 254
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.moreno_lesmis.tar.bz2"
+
+[Jazz_musicians]
+name = "Jazz musicians"
+file_name = "Jazz_musicians"
+internal_name = "arenas-jazz"
+is_weighted = false
+total_n = 198
+total_m = 2742
+LCC_n = 198
+LCC_m = 2742
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.arenas-jazz.tar.bz2"
+
+[Hamsterster_households]
+name = "Hamsterster households"
+file_name = "Hamsterster_households"
+internal_name = "petster-hamster-household"
+is_weighted = false
+total_n = 1576
+total_m = 4032
+LCC_n = 874
+LCC_m = 4003
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.petster-hamster-household.tar.bz2"
+
+[Euroroads]
+name = "Euroroads"
+file_name = "Euroroads"
+internal_name = "subelj_euroroad"
+is_weighted = false
+total_n = 1174
+total_m = 1417
+LCC_n = 1039
+LCC_m = 1305
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.subelj_euroroad.tar.bz2"
+
+[Hamsterster_friends]
+name = "Hamsterster friends"
+file_name = "Hamsterster_friends"
+internal_name = "petster-hamster-friend"
+is_weighted = false
+total_n = 2952
+total_m = 12534
+LCC_n = 1788
+LCC_m = 12476
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.petster-hamster-friend.tar.bz2"
+
+[ego-Facebook]
+name = "ego-Facebook"
+file_name = "ego-Facebook"
+is_weighted = false
+total_n = 4039
+total_m = 88234
+LCC_n = 4039
+LCC_m = 88234
+dir_name = "data/"
+source = "SNAP"
+url = "http://snap.stanford.edu/data/facebook_combined.txt.gz"
+
+[CA-GrQc]
+name = "CA-GrQc"
+file_name = "CA-GrQc"
+is_weighted = false
+total_n = 5242
+total_m = 14496
+LCC_n = 4158
+LCC_m = 13428
+dir_name = "data/"
+source = "SNAP"
+url = "http://snap.stanford.edu/data/ca-GrQc.txt.gz"
+
+[US_power_grid]
+name = "US power grid"
+file_name = "US_power_grid"
+internal_name = "opsahl-powergrid"
+is_weighted = false
+total_n = 4941
+total_m = 6594
+LCC_n = 4941
+LCC_m = 6594
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.opsahl-powergrid.tar.bz2"
+
+[Reactome]
+name = "Reactome"
+file_name = "Reactome"
+internal_name = "reactome"
+is_weighted = false
+total_n = 6327
+total_m = 147547
+LCC_n = 5973
+LCC_m = 146992
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.reactome.tar.bz2"
+
+[CA-HepTh]
+name = "CA-HepTh"
+file_name = "CA-HepTh"
+is_weighted = false
+total_n = 9877
+total_m = 25998
+LCC_n = 8638
+LCC_m = 24827
+dir_name = "data/"
+source = "SNAP"
+url = "http://snap.stanford.edu/data/ca-HepTh.txt.gz"
+
+[Sister_cities]
+name = "Sister cities"
+file_name = "Sister_cities"
+internal_name = "twin"
+is_weighted = false
+total_n = 14274
+total_m = 20573
+LCC_n = 10320
+LCC_m = 17988
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.twin.tar.bz2"
+
+[CA-HepPh]
+name = "CA-HepPh"
+file_name = "CA-HepPh"
+is_weighted = false
+total_n = 12008
+total_m = 118521
+LCC_n = 11204
+LCC_m = 117649
+dir_name = "data/"
+source = "SNAP"
+url = "http://snap.stanford.edu/data/ca-HepPh.txt.gz"
+
+[CAIDA]
+name = "CAIDA"
+file_name = "CAIDA"
+internal_name = "as-caida20071105"
+is_weighted = false
+total_n = 26475
+total_m = 53381
+LCC_n = 26475
+LCC_m = 53381
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.as-caida20071105.tar.bz2"
+
+[loc-Gowalla]
+name = "loc-Gowalla"
+file_name = "loc-Gowalla"
+is_weighted = false
+total_n = 196591
+total_m = 950327
+LCC_n = 196591
+LCC_m = 950327
+dir_name = "data/"
+source = "SNAP"
+url = "http://snap.stanford.edu/data/loc-gowalla_edges.txt.gz"
+
+[com-Amazon]
+name = "com-Amazon"
+file_name = "com-Amazon"
+is_weighted = false
+total_n = 334863
+total_m = 925872
+LCC_n = 334863
+LCC_m = 925872
+dir_name = "data/"
+source = "SNAP"
+url = "http://snap.stanford.edu/data/bigdata/communities/com-amazon.ungraph.txt.gz"
+
+[Dogster_friends]
+name = "Dogster friends"
+file_name = "Dogster_friends"
+internal_name = "petster-dog-friend"
+is_weighted = false
+total_n = 451710
+total_m = 8543549
+LCC_n = 426485
+LCC_m = 8543321
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.petster-dog-friend.tar.bz2"
+
+[roadNet-PA]
+name = "roadNet-PA"
+file_name = "roadNet-PA"
+is_weighted = false
+total_n = 1088092
+total_m = 1541898
+LCC_n = 1087562
+LCC_m = 1541514
+dir_name = "data/"
+source = "SNAP"
+url = "http://snap.stanford.edu/data/roadNet-PA.txt.gz"
+
+[Skitter]
+name = "Skitter"
+file_name = "Skitter"
+internal_name = "as-skitter"
+is_weighted = false
+total_n = 1696415
+total_m = 11095298
+LCC_n = 1694616
+LCC_m = 11094209
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.as-skitter.tar.bz2"
+
+[roadNet-CA]
+name = "roadNet-CA"
+file_name = "roadNet-CA"
+is_weighted = false
+total_n = 1965206
+total_m = 2766607
+LCC_n = 1957027
+LCC_m = 2760388
+dir_name = "data/"
+source = "SNAP"
+url = "http://snap.stanford.edu/data/roadNet-CA.txt.gz"

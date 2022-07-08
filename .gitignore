@@ -4,3 +4,5 @@
 meta.*
 out.*
 README.*
+*.bz2
+!data/small-graph.txt
