@@ -11,19 +11,17 @@ abstract type Graph end
 struct UnweightedGraph <: Graph
     nodes::Set{Int}
     edges::Set{NTuple{2,Int}}
-    adjs::AbstractDict{Int,Set{Int}}
 end
 
 struct WeightedGraph <: Graph
     nodes::Set{Int}
     edges::Set{NTuple{3,Int}}
-    adjs::AbstractDict{Int,Set{Int}}
 end
 
 size(g::Graph) = (n=length(g.nodes), m=length(g.edges))
 
-UnweightedGraph() = UnweightedGraph(Set{Int}(), Set{NTuple{2,Int}}(), DefaultDict{Int,Set{Int}}(() -> Set{Int}()))
-WeightedGraph() = WeightedGraph(Set{Int}(), Set{NTuple{3,Int}}(), DefaultDict{Int,Set{Int}}(() -> Set{Int}()))
+UnweightedGraph() = UnweightedGraph(Set{Int}(), Set{NTuple{2,Int}}())
+WeightedGraph() = WeightedGraph(Set{Int}(), Set{NTuple{3,Int}}())
 
 SimilarGraph(::UnweightedGraph) = UnweightedGraph()
 SimilarGraph(::WeightedGraph) = WeightedGraph()
@@ -34,7 +32,6 @@ Prefix(::WeightedGraph) = "WeightedGraph"
 function AddEdge(g::Graph, e::NTuple)
     u, v = e
     push!(g.nodes, u), push!(g.nodes, v)
-    push!(g.adjs[u], v), push!(g.adjs[v], u)
     push!(g.edges, e)
 end
 
@@ -56,6 +53,7 @@ function ReadGraph(input_path::AbstractString, is_weighted::Bool)
 end
 
 function FindLCC(g::Graph)
+    println("Finding LCC of graph...")
     fa = DefaultDict{Int,Int}(-1)
     find(x) = fa[x] < 0 ? x : (fa[x] = find(fa[x]); fa[x])
     for (u, v) in ProgressBar(g.edges)
@@ -70,21 +68,26 @@ function FindLCC(g::Graph)
         fa[v] = u
     end
     root = argmin(fa)
-    new_g = SimilarGraph(g)
-    nodes = filter(x -> find(x) == root, g.nodes)
-    for e in g.edges
-        u, v = e
-        if u in nodes && v in nodes
-            AddEdge(new_g, e)
-        end
+    remove_nodes = filter(x -> find(x) != root, g.nodes)
+    remove_edges = Set{NTuple}()
+    if length(remove_nodes) > 0
+        remove_edges = filter(e -> e[1] in remove_nodes || e[2] in remove_nodes, g.edges)
     end
-    return new_g
+    for u in ProgressBar(remove_nodes)
+        delete!(g.nodes, u)
+    end
+    for e in ProgressBar(remove_edges)
+        delete!(g.edges, e)
+    end
+    return g
 end
 
 function Renumber(g::Graph)
+    println("Renumbering nodes...")
     o2n = DefaultDict{Int,Int}(() -> length(o2n) + 1)
     new_g = SimilarGraph(g)
-    for e in sort(collect(g.edges))
+    edges = sort(collect(g.edges))
+    for e in ProgressBar(edges)
         u, v = e
         AddEdge(new_g, (o2n[u], o2n[v], e[3:end]...))
     end
@@ -155,7 +158,6 @@ function PrepareFile(d::AbstractDict)
         raw_path, del_path = Prepare(d)
         g = ReadGraph(raw_path, is_weighted)
         @show size(g)
-        println("Finding LCC of graph...")
         new_g = Renumber(FindLCC(g))
         println("Writing new graph...")
         WriteGraph(new_g, d["name"], file_path)

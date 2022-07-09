@@ -44,8 +44,11 @@ function ReadGraph(d::AbstractDict)
         e = tuple(map(x -> parse(Int, x), split(line, ('\t', ' ')))..., 1)
         u, v, w = e
         append!(A_I, u), append!(A_J, v), append!(A_V, w)
-        append!(A_I, v), append!(A_J, u), append!(A_V, w)
-        d[u], d[v] = d[u] + w, d[v] + w
+        d[u] += w
+        if u != v
+            append!(A_I, v), append!(A_J, u), append!(A_V, w)
+            d[v] += w
+        end
     end
     return d, sparse(A_I, A_J, A_V)
 end
@@ -137,7 +140,7 @@ function ComputeApproxInitialMargin(d::Vector{Float64}, A::SparseMatrixCSC{Float
     sol = approxchol_lap(A)
     B, W, _ = LapDecomp(L)
     M = size(W, 1)
-    m = ceil(Int, c * log(N))
+    m = min(N, ceil(Int, c * log(N)))
     Q = ComputeMapMat(m, M)
     Q = Q * W * B'
     Z = Matrix{Float64}(undef, m, N)
@@ -167,7 +170,7 @@ function ComputeApproxMargin(d::Vector{Float64}, L::SparseMatrixCSC{Float64,Int6
     sol_d = sol(d)
     B, W, X = LapDecomp(L)
     M = size(W, 1)
-    m = ceil(Int, c * log(N))
+    m = min(N, ceil(Int, c * log(N)))
     Q, R = ComputeMapMat(m, M), ComputeMapMat(m, N)
     Q = Q * W * B'
     R = R * X
@@ -187,7 +190,6 @@ end
 function SelectNode(margin::Vector{Float64})
     N = size(margin, 1)
     max_margin = fill(-Inf, nthreads())
-    # max_margin = zeros(Float64, nthreads())
     max_margin_arg = zeros(Int, nthreads())
     iter = N >= 500000 ? ProgressBar(1:N) : (1:N)
     @threads for u in iter
@@ -337,10 +339,13 @@ function ComputeMarginError(tot_d::AbstractDict; graph_indices::Vector{String}, 
     open(io -> TOML.print(io, errors), output_path, "w")
 end
 
-function ComputeRunningTime(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, approx::Bool)
-    run_times = Dict{AbstractString,Float64}()
+function ComputeRunningTime(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, approx::Bool, inc::Bool)
+    run_times = (inc && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Float64}()
     for graph_index in graph_indices
         graph_name = tot_d[graph_index]["name"]
+        if haskey(run_times, graph_name)
+            continue
+        end
         println("graph_name = $graph_name")
         d, sp_A = ReadGraph(tot_d[graph_index])
         stats = @timed ComputeAbsorbSet(d, sp_A, K; approx=approx)
@@ -355,15 +360,11 @@ BLAS.set_num_threads(32)
 
 ComputeMarginError(tot_d;
     graph_indices=[
-        "Zachary_karate_club",
-        "Contiguous_USA",
-        "Dolphins",
-        "Train_bombing",
-        "Les_Miserables",
-        "Jazz_musicians",
         "Hamsterster_households",
         "Euroroads",
         "Hamsterster_friends",
+        "ego-Facebook",
+        "CA-GrQc",
     ],
     output_path="outputs/margin_errors.toml",
     coeffs=[10, 20, 50, 100],
@@ -372,13 +373,10 @@ ComputeMarginError(tot_d;
 
 CompareEffect(tot_d;
     graph_indices=[
-        "Dolphins",
-        "Train_bombing",
-        "Les_Miserables",
-        "Jazz_musicians",
-        "Hamsterster_households",
         "Euroroads",
         "Hamsterster_friends",
+        "ego-Facebook",
+        "CA-GrQc",
     ],
     output_path="outputs/compare_effects_exact.toml",
     K=50, approx=false
@@ -386,14 +384,10 @@ CompareEffect(tot_d;
 
 ComputeRunningTime(tot_d;
     graph_indices=[
-        "small-graph",
         "Zachary_karate_club",
         "Contiguous_USA",
-        "Dolphins",
-        "Train_bombing",
         "Les_Miserables",
         "Jazz_musicians",
-        "Hamsterster_households",
         "Euroroads",
         "Hamsterster_friends",
         "ego-Facebook",
@@ -419,17 +413,18 @@ ComputeRunningTime(tot_d;
     graph_indices=[
         "Zachary_karate_club",
         "Contiguous_USA",
-        "Dolphins",
-        "Train_bombing",
         "Les_Miserables",
         "Jazz_musicians",
-        "Hamsterster_households",
         "Euroroads",
         "Hamsterster_friends",
         "ego-Facebook",
         "CA-GrQc",
         "US_power_grid",
+        "Reactome",
+        "CA-HepTh",
+        "Sister_cities",
+        "CA-HepPh",
     ],
     output_path="outputs/running_time_exact.toml",
-    K=10, approx=false
+    K=10, approx=false, inc=true
 )
