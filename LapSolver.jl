@@ -259,6 +259,9 @@ function CompareEffect(tot_d::AbstractDict; graph_indices::Vector{String}, outpu
     mancs = (inc && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Dict{AbstractString,Vector{Float64}}}()
     for graph_index in graph_indices
         graph_name = tot_d[graph_index]["name"]
+        if haskey(mancs, graph_name)
+            continue
+        end
         println("graph_name = $graph_name")
         manc = Dict{AbstractString,Vector{Float64}}()
         d, sp_A = ReadGraph(tot_d[graph_index])
@@ -309,12 +312,15 @@ function ComputeHistogramData(ratios::Vector{Float64}, limits::Vector{Float64})
     return cnt ./ N
 end
 
-function ComputeMarginError(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, coeffs::Vector{Int}, limits::Vector{Float64})
+function ComputeMarginError(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, coeffs::Vector{Int}, limits::Vector{Float64}, inc::Bool)
     append!(limits, 1.01)
     sort!(limits)
-    errors = Dict{AbstractString,Dict{AbstractString,Any}}()
+    errors = (inc && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Dict{AbstractString,Any}}()
     for graph_index in graph_indices
         graph_name = tot_d[graph_index]["name"]
+        if haskey(errors, graph_name)
+            continue
+        end
         println("graph_name = $graph_name")
         d, sp_A = ReadGraph(tot_d[graph_index])
         N = size(sp_A, 1)
@@ -365,10 +371,12 @@ ComputeMarginError(tot_d;
         "Hamsterster_friends",
         "ego-Facebook",
         "CA-GrQc",
+        "US_power_grid",
     ],
     output_path="outputs/margin_errors.toml",
     coeffs=[10, 20, 50, 100],
-    limits=[0.1, 0.2, 0.3, 0.4, 0.5]
+    limits=[0.1, 0.2, 0.3, 0.4, 0.5],
+    inc=true
 )
 
 CompareEffect(tot_d;
