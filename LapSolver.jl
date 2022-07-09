@@ -255,8 +255,8 @@ function ComputeRankSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K
     return copy(partialsortperm(margin, 1:K; rev=true))
 end
 
-function CompareEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, approx::Bool=false)
-    mancs = Dict{AbstractString,Dict{AbstractString,Vector{Float64}}}()
+function CompareEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, approx::Bool, inc::Bool)
+    mancs = (inc && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Dict{AbstractString,Vector{Float64}}}()
     for graph_index in graph_indices
         graph_name = tot_d[graph_index]["name"]
         println("graph_name = $graph_name")
@@ -377,9 +377,10 @@ CompareEffect(tot_d;
         "Hamsterster_friends",
         "ego-Facebook",
         "CA-GrQc",
+        "US_power_grid",
     ],
     output_path="outputs/compare_effects_exact.toml",
-    K=50, approx=false
+    K=50, approx=false, inc=true
 )
 
 ComputeRunningTime(tot_d;
@@ -406,7 +407,7 @@ ComputeRunningTime(tot_d;
         "roadNet-CA",
     ],
     output_path="outputs/running_time_approx.toml",
-    K=10, approx=true
+    K=10, approx=true, inc=true
 )
 
 ComputeRunningTime(tot_d;
