@@ -135,7 +135,7 @@ function ComputeExactInitialMargin(d::Vector{Float64}, A::SparseMatrixCSC{Float6
     return map(u -> -dot(e[u], pinv_L, e[u]), 1:N)
 end
 
-function ComputeApproxInitialMargin(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, L::SparseMatrixCSC{Float64,Int64}, d_sum::Float64, c::Int=20)
+function ComputeApproxInitialMargin(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, L::SparseMatrixCSC{Float64,Int64}, d_sum::Float64, c::Int=50)
     N = size(L, 1)
     sol = approxchol_lap(A)
     B, W, _ = LapDecomp(L)
@@ -164,7 +164,7 @@ function ComputeExactMargin(d::Vector{Float64}, L::SparseMatrixCSC{Float64,Int64
     return map(u -> sol_d[u]^2 / inv_L[u, u], 1:N)
 end
 
-function ComputeApproxMargin(d::Vector{Float64}, L::SparseMatrixCSC{Float64,Int64}, c::Int=20)
+function ComputeApproxMargin(d::Vector{Float64}, L::SparseMatrixCSC{Float64,Int64}, c::Int=50)
     N = size(L, 1)
     sol = approxchol_sddm(L)
     sol_d = sol(d)
@@ -256,45 +256,49 @@ function ComputeRankSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K
 end
 
 function CompareEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, approx::Bool, inc::Bool)
+    println("Computing different algorithms...")
     mancs = (inc && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Dict{AbstractString,Vector{Float64}}}()
-    for graph_index in graph_indices
-        graph_name = tot_d[graph_index]["name"]
-        if haskey(mancs, graph_name)
-            continue
+    try
+        for graph_index in graph_indices
+            graph_name = tot_d[graph_index]["name"]
+            if haskey(mancs, graph_name)
+                continue
+            end
+            println("graph_name = $graph_name")
+            manc = Dict{AbstractString,Vector{Float64}}()
+            d, sp_A = ReadGraph(tot_d[graph_index])
+            N = size(sp_A, 1)
+
+            println("Computing absorb set...")
+            S = ComputeAbsorbSet(d, sp_A, K; approx=true)
+            println("Computing MANC on absorb set...")
+            manc["absorb"] = ComputeMANCSeries(d, sp_A, S, approx)
+
+            println("Computing exact set...")
+            S = ComputeAbsorbSet(d, sp_A, K; approx=false)
+            println("Computing MANC on exact set...")
+            manc["exact"] = ComputeMANCSeries(d, sp_A, S, approx)
+
+            println("Computing rank set...")
+            S = ComputeRankSet(d, sp_A, K)
+            println("Computing MANC on rank set...")
+            manc["rank"] = ComputeMANCSeries(d, sp_A, S, approx)
+
+            println("Computing degree set...")
+            S = ComputeDegreeSet(d, K)
+            println("Computing MANC on degree set...")
+            manc["degree"] = ComputeMANCSeries(d, sp_A, S, approx)
+
+            println("Computing random set...")
+            S = ComputeRandomSet(N, K)
+            println("Computing MANC on random set...")
+            manc["random"] = ComputeMANCSeries(d, sp_A, S, approx)
+
+            mancs[graph_name] = manc
         end
-        println("graph_name = $graph_name")
-        manc = Dict{AbstractString,Vector{Float64}}()
-        d, sp_A = ReadGraph(tot_d[graph_index])
-        N = size(sp_A, 1)
-
-        println("Computing absorb set...")
-        S = ComputeAbsorbSet(d, sp_A, K; approx=true)
-        println("Computing MANC on absorb set...")
-        manc["absorb"] = ComputeMANCSeries(d, sp_A, S, approx)
-
-        println("Computing exact set...")
-        S = ComputeAbsorbSet(d, sp_A, K; approx=false)
-        println("Computing MANC on exact set...")
-        manc["exact"] = ComputeMANCSeries(d, sp_A, S, approx)
-
-        println("Computing rank set...")
-        S = ComputeRankSet(d, sp_A, K)
-        println("Computing MANC on rank set...")
-        manc["rank"] = ComputeMANCSeries(d, sp_A, S, approx)
-
-        println("Computing degree set...")
-        S = ComputeDegreeSet(d, K)
-        println("Computing MANC on degree set...")
-        manc["degree"] = ComputeMANCSeries(d, sp_A, S, approx)
-
-        println("Computing random set...")
-        S = ComputeRandomSet(N, K)
-        println("Computing MANC on random set...")
-        manc["random"] = ComputeMANCSeries(d, sp_A, S, approx)
-
-        mancs[graph_name] = manc
+    finally
+        open(io -> TOML.print(io, mancs), output_path, "w")
     end
-    open(io -> TOML.print(io, mancs), output_path, "w")
 end
 
 function ComputeHistogramData(ratios::Vector{Float64}, limits::Vector{Float64})
@@ -313,51 +317,59 @@ function ComputeHistogramData(ratios::Vector{Float64}, limits::Vector{Float64})
 end
 
 function ComputeMarginError(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, coeffs::Vector{Int}, limits::Vector{Float64}, inc::Bool)
+    println("Computing margin error...")
     append!(limits, 1.01)
     sort!(limits)
     errors = (inc && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Dict{AbstractString,Any}}()
-    for graph_index in graph_indices
-        graph_name = tot_d[graph_index]["name"]
-        if haskey(errors, graph_name)
-            continue
+    try
+        for graph_index in graph_indices
+            graph_name = tot_d[graph_index]["name"]
+            if haskey(errors, graph_name)
+                continue
+            end
+            println("graph_name = $graph_name")
+            d, sp_A = ReadGraph(tot_d[graph_index])
+            N = size(sp_A, 1)
+            d_sum = sum(d)
+            L = spdiagm(d) - sp_A
+            margin = ComputeExactInitialMargin(d, sp_A, L, d_sum)
+            u = SelectNode(margin)
+            mask = trues(N)
+            mask[u] = 0
+            d, L = d[mask], L[mask, mask]
+            exact_margin = ComputeExactMargin(d, L)
+            single_error = Dict{AbstractString,Any}()
+            for coeff in coeffs
+                println("coeff = $coeff")
+                approx_margin = ComputeApproxMargin(d, L, coeff)
+                ratios = @. abs(approx_margin - exact_margin) / exact_margin
+                cnt = ComputeHistogramData(ratios, limits)
+                single_error["$coeff"] = Dict("distribution" => cnt, "mean" => mean(ratios))
+            end
+            errors[graph_name] = single_error
         end
-        println("graph_name = $graph_name")
-        d, sp_A = ReadGraph(tot_d[graph_index])
-        N = size(sp_A, 1)
-        d_sum = sum(d)
-        L = spdiagm(d) - sp_A
-        margin = ComputeExactInitialMargin(d, sp_A, L, d_sum)
-        u = SelectNode(margin)
-        mask = trues(N)
-        mask[u] = 0
-        d, L = d[mask], L[mask, mask]
-        exact_margin = ComputeExactMargin(d, L)
-        single_error = Dict{AbstractString,Any}()
-        for coeff in coeffs
-            println("coeff = $coeff")
-            approx_margin = ComputeApproxMargin(d, L, coeff)
-            ratios = @. abs(approx_margin - exact_margin) / exact_margin
-            cnt = ComputeHistogramData(ratios, limits)
-            single_error["$coeff"] = Dict("distribution" => cnt, "mean" => mean(ratios))
-        end
-        errors[graph_name] = single_error
+    finally
+        open(io -> TOML.print(io, errors), output_path, "w")
     end
-    open(io -> TOML.print(io, errors), output_path, "w")
 end
 
 function ComputeRunningTime(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, approx::Bool, inc::Bool)
+    println("Computing running time...")
     run_times = (inc && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Float64}()
-    for graph_index in graph_indices
-        graph_name = tot_d[graph_index]["name"]
-        if haskey(run_times, graph_name)
-            continue
+    try
+        for graph_index in graph_indices
+            graph_name = tot_d[graph_index]["name"]
+            if haskey(run_times, graph_name)
+                continue
+            end
+            println("graph_name = $graph_name")
+            d, sp_A = ReadGraph(tot_d[graph_index])
+            stats = @timed ComputeAbsorbSet(d, sp_A, K; approx=approx)
+            run_times[graph_name] = stats.time
         end
-        println("graph_name = $graph_name")
-        d, sp_A = ReadGraph(tot_d[graph_index])
-        stats = @timed ComputeAbsorbSet(d, sp_A, K; approx=approx)
-        run_times[graph_name] = stats.time
+    finally
+        open(io -> TOML.print(io, run_times), output_path, "w")
     end
-    open(io -> TOML.print(io, run_times), output_path, "w")
 end
 
 const tot_d = TOML.parsefile("graphs.toml")
@@ -374,7 +386,7 @@ ComputeMarginError(tot_d;
         "US_power_grid",
     ],
     output_path="outputs/margin_errors.toml",
-    coeffs=[10, 20, 50, 100],
+    coeffs=[20, 50, 100, 200],
     limits=[0.1, 0.2, 0.3, 0.4, 0.5],
     inc=true
 )
@@ -411,7 +423,6 @@ ComputeRunningTime(tot_d;
         "com-Amazon",
         "Dogster_friends",
         "roadNet-PA",
-        "Skitter",
         "roadNet-CA",
     ],
     output_path="outputs/running_time_approx.toml",
@@ -432,7 +443,6 @@ ComputeRunningTime(tot_d;
         "Reactome",
         "CA-HepTh",
         "Sister_cities",
-        "CA-HepPh",
     ],
     output_path="outputs/running_time_exact.toml",
     K=10, approx=false, inc=true

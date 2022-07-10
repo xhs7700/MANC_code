@@ -1,4 +1,3 @@
-import enum
 import numpy as np
 import matplotlib.pyplot as plt
 import toml
@@ -54,5 +53,5 @@ def margin_errors(toml_name, input_dir, output_dir, factors, label_prefix):
 # compare_effects("compare_effects_exact", "outputs", "images",
 #                 ["rank", "exact", "degree", "absorb"])
 
-margin_errors("margin_errors", "outputs", "images", ["10", "20", "50", "100"],
+margin_errors("margin_errors", "outputs", "images", ["20", "50", "100", "200"],
               r"$c_{JL}$")
