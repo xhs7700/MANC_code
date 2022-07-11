@@ -9,6 +9,19 @@ LCC_m = 7
 dir_name = "data/"
 source = "SELF"
 
+[Zebra]
+name = "Zebra"
+file_name = "Zebra"
+internal_name = "moreno_zebra"
+is_weighted = false
+total_n = 27
+total_m = 111
+LCC_n = 23
+LCC_m = 105
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.moreno_zebra.tar.bz2"
+
 [Zachary_karate_club]
 name = "Zachary karate club"
 file_name = "Zachary_karate_club"
