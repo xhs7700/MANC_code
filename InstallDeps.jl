@@ -6,7 +6,8 @@ packages = [
     "GZip",
     "JSON",
     "TimerOutputs",
-    "BenchmarkTools"
+    "BenchmarkTools",
+    "Caching",
 ]
 
 Pkg.add(packages)
