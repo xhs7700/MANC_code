@@ -312,3 +312,41 @@ LCC_m = 2760388
 dir_name = "data/"
 source = "SNAP"
 url = "http://snap.stanford.edu/data/roadNet-CA.txt.gz"
+
+[roadNet-TX]
+name = "roadNet-TX"
+file_name = "roadNet-TX"
+is_weighted = false
+total_n = 1379917
+total_m = 1921660
+LCC_n = 1351137
+LCC_m = 1879201
+dir_name = "data/"
+source = "SNAP"
+url = "http://snap.stanford.edu/data/roadNet-TX.txt.gz"
+
+[YouTube]
+name = "YouTube"
+file_name = "YouTube"
+internal_name = "com-youtube"
+is_weighted = false
+total_n = 1134890
+total_m = 2987624
+LCC_n = 1134890
+LCC_m = 2987624
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.com-youtube.tar.bz2"
+
+[Flixster]
+name = "Flixster"
+file_name = "Flixster"
+internal_name = "flixster"
+is_weighted = false
+total_n = 2523386
+total_m = 7918801
+LCC_n = 2523386
+LCC_m = 7918801
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.flixster.tar.bz2"

@@ -7,3 +7,5 @@ function DisplayTxtHeads(input_path::AbstractString, num_line::Int)
     end
     close(io)
 end
+
+DisplayTxtHeads("data/roadNet-TX.txt", 10)
