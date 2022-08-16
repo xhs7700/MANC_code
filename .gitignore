@@ -1,6 +1,7 @@
 *.txt
 *.txt.gz
 *.svg
+*.eps
 meta.*
 out.*
 README.*

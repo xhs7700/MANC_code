@@ -5,6 +5,7 @@ from os import path
 
 figsize = (8, 8)
 d = {0: '(a)', 1: '(b)', 2: '(c)', 3: '(d)'}
+markers = "so^+xD"
 
 
 def compare_effects(toml_name, input_dir, output_dir, algos):
@@ -16,8 +17,8 @@ def compare_effects(toml_name, input_dir, output_dir, algos):
         ax = axs[(i >> 1) & 1, i & 1]
         n = len(mancs[algos[0]])
         x = np.arange(1, n + 1)
-        for algo in algos:
-            ax.plot(x, mancs[algo], label=algo)
+        for j, algo in enumerate(algos):
+            ax.plot(x, mancs[algo], label=algo, marker=markers[j])
         ax.set_xlabel(r'$k$')
         ax.set_ylabel(r'$M(S)$')
         ax.set_title(f'{d[i]} {graph_name}')
@@ -56,5 +57,8 @@ def margin_errors(toml_name, input_dir, output_dir, factors, label_prefix):
 compare_effects("compare_effects_exact", "outputs", "images",
                 ["Top-SANC", "Exact", "Top-Degree", "Approx"])
 
-margin_errors("margin_errors", "outputs", "images", ["20", "50", "100", "200"],
-              r"$c_{JL}$")
+# compare_effects("compare_effects_optimum", "outputs", "images",
+#                 ["Exact", "Approx", "Optimum"])
+
+# margin_errors("margin_errors", "outputs", "images", ["20", "50", "100", "200"],
+#               r"$c_{JL}$")

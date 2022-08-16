@@ -7,6 +7,28 @@ using SparseArrays
 using TOML
 using Base.Threads
 using Base.Filesystem
+using Caching
+
+struct Comb
+    N::Int
+    K::Int
+end
+
+function Base.iterate(C::Comb, state=one(UInt128) << C.K - 1)
+    state < one(UInt128) << C.N || return nothing
+    x = state & (-state)
+    y = state + x
+    new_state = (((state & (~y)) ÷ x) >> 1) | y
+    return ([i + 1 for i in 0:C.N-1 if (one(UInt128) << i) & state != zero(UInt128)], new_state)
+    # return (bitstring(state)[end-C.N+1:end], new_state)
+end
+
+Base.length(C::Comb) = CombNum(C.N, C.K)
+Base.firstindex(::Comb) = 1
+
+@cache function CombNum(N::Int, K::Int)::Int
+    return K == 0 ? 1 : N == K ? 1 : CombNum(N - 1, K - 1) + CombNum(N - 1, K)
+end
 
 my_display(x) = display(x), println()
 
@@ -203,8 +225,7 @@ function SelectNode(margin::Vector{Float64})
 end
 
 function ComputeAbsorbSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K::Int; approx::Bool=true)
-    N = size(A, 1)
-    d_sum = sum(d)
+    N, d_sum = size(A, 1), sum(d)
     L = spdiagm(d) - A
     t = RBTree{Int}()
     S = Int[]
@@ -236,6 +257,30 @@ function ComputeAbsorbSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64},
     return S
 end
 
+function ComputeOptimumSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K::Int)
+    N, d_sum = size(A, 1), sum(d)
+    # opt_vec = argmin(S -> ComputeExactMANC(d, A, S, d_sum), Comb(N, K))
+    min_manc = fill(Inf, nthreads())
+    min_manc_arg = [collect(1:K) for _ in 1:nthreads()]
+    for S in ProgressBar(Comb(N, K))
+        t = threadid()
+        manc = ComputeExactMANC(d, A, S, d_sum)
+        if manc < min_manc[t]
+            min_manc[t] = manc
+            min_manc_arg[t] = S
+        end
+    end
+    opt_vec = min_manc_arg[argmin(min_manc)]
+    opt_set = Set(opt_vec)
+    ans = Int[]
+    while !isempty(opt_set)
+        node = argmin(u -> ComputeExactMANC(d, A, vcat(ans, u), d_sum), opt_set)
+        delete!(opt_set, node)
+        append!(ans, node)
+    end
+    return ans
+end
+
 function ComputeRandomSet(N::Int, K::Int)
     V, S = Set(1:N), Int[]
     for _ in 1:K
@@ -256,7 +301,7 @@ function ComputeRankSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K
 end
 
 function CompareEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, approx::Bool, inc::Bool)
-    println("Computing different algorithms...")
+    println("CompareEffect: Computing different algorithms...")
     mancs = (inc && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Dict{AbstractString,Vector{Float64}}}()
     try
         for graph_index in graph_indices
@@ -272,27 +317,68 @@ function CompareEffect(tot_d::AbstractDict; graph_indices::Vector{String}, outpu
             println("Computing absorb set...")
             S = ComputeAbsorbSet(d, sp_A, K; approx=true)
             println("Computing MANC on absorb set...")
-            manc["absorb"] = ComputeMANCSeries(d, sp_A, S, approx)
+            manc["Approx"] = ComputeMANCSeries(d, sp_A, S, approx)
 
             println("Computing exact set...")
             S = ComputeAbsorbSet(d, sp_A, K; approx=false)
             println("Computing MANC on exact set...")
-            manc["exact"] = ComputeMANCSeries(d, sp_A, S, approx)
+            manc["Exact"] = ComputeMANCSeries(d, sp_A, S, approx)
 
             println("Computing rank set...")
             S = ComputeRankSet(d, sp_A, K)
             println("Computing MANC on rank set...")
-            manc["rank"] = ComputeMANCSeries(d, sp_A, S, approx)
+            manc["Top-SANC"] = ComputeMANCSeries(d, sp_A, S, approx)
 
             println("Computing degree set...")
             S = ComputeDegreeSet(d, K)
             println("Computing MANC on degree set...")
-            manc["degree"] = ComputeMANCSeries(d, sp_A, S, approx)
+            manc["Top-Degree"] = ComputeMANCSeries(d, sp_A, S, approx)
 
-            println("Computing random set...")
-            S = ComputeRandomSet(N, K)
-            println("Computing MANC on random set...")
-            manc["random"] = ComputeMANCSeries(d, sp_A, S, approx)
+            mancs[graph_name] = manc
+        end
+    finally
+        open(io -> TOML.print(io, mancs), output_path, "w")
+    end
+end
+
+function CompareOptimumEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, inc::Bool)
+    println("CompareOptimumEffect: Computing different algorithms...")
+    mancs = (inc && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Dict{AbstractString,Vector{Float64}}}()
+    try
+        for graph_index in graph_indices
+            graph_name = tot_d[graph_index]["name"]
+            if haskey(mancs, graph_name)
+                continue
+            end
+            println("graph_name = $graph_name")
+            manc = Dict{AbstractString,Vector{Float64}}()
+            d, sp_A = ReadGraph(tot_d[graph_index])
+            N = size(sp_A, 1)
+
+            println("Computing absorb set...")
+            S = ComputeAbsorbSet(d, sp_A, K; approx=true)
+            println("Computing MANC on absorb set...")
+            manc["Approx"] = ComputeMANCSeries(d, sp_A, S)
+
+            println("Computing exact set...")
+            S = ComputeAbsorbSet(d, sp_A, K; approx=false)
+            println("Computing MANC on exact set...")
+            manc["Exact"] = ComputeMANCSeries(d, sp_A, S)
+
+            println("Computing rank set...")
+            S = ComputeRankSet(d, sp_A, K)
+            println("Computing MANC on rank set...")
+            manc["Top-SANC"] = ComputeMANCSeries(d, sp_A, S)
+
+            println("Computing degree set...")
+            S = ComputeDegreeSet(d, K)
+            println("Computing MANC on degree set...")
+            manc["Top-Degree"] = ComputeMANCSeries(d, sp_A, S)
+
+            println("Computing optimum set...")
+            S = ComputeOptimumSet(d, sp_A, K)
+            println("Computing MANC on optimum set...")
+            manc["Optimum"] = ComputeMANCSeries(d, sp_A, S)
 
             mancs[graph_name] = manc
         end
@@ -374,76 +460,88 @@ end
 
 const tot_d = TOML.parsefile("graphs.toml")
 
-BLAS.set_num_threads(32)
-
-ComputeMarginError(tot_d;
-    graph_indices=[
-        "Hamsterster_households",
-        "Euroroads",
-        "Hamsterster_friends",
-        "ego-Facebook",
-        "CA-GrQc",
-        "US_power_grid",
-    ],
-    output_path="outputs/margin_errors.toml",
-    coeffs=[20, 50, 100, 200],
-    limits=[0.1, 0.2, 0.3, 0.4, 0.5],
-    inc=true
-)
-
-CompareEffect(tot_d;
-    graph_indices=[
-        "Euroroads",
-        "Hamsterster_friends",
-        "ego-Facebook",
-        "CA-GrQc",
-        "US_power_grid",
-    ],
-    output_path="outputs/compare_effects_exact.toml",
-    K=50, approx=false, inc=true
-)
-
-ComputeRunningTime(tot_d;
+CompareOptimumEffect(tot_d;
     graph_indices=[
         "Zachary_karate_club",
+        "Zebra",
         "Contiguous_USA",
         "Les_Miserables",
-        "Jazz_musicians",
-        "Euroroads",
-        "Hamsterster_friends",
-        "ego-Facebook",
-        "CA-GrQc",
-        "US_power_grid",
-        "Reactome",
-        "CA-HepTh",
-        "Sister_cities",
-        "CA-HepPh",
-        "CAIDA",
-        "loc-Gowalla",
-        "com-Amazon",
-        "Dogster_friends",
-        "roadNet-PA",
-        "roadNet-CA",
     ],
-    output_path="outputs/running_time_approx.toml",
-    K=10, approx=true, inc=true
+    output_path="outputs/compare_effects_optimum.toml",
+    K=5, inc=true
 )
 
-ComputeRunningTime(tot_d;
-    graph_indices=[
-        "Zachary_karate_club",
-        "Contiguous_USA",
-        "Les_Miserables",
-        "Jazz_musicians",
-        "Euroroads",
-        "Hamsterster_friends",
-        "ego-Facebook",
-        "CA-GrQc",
-        "US_power_grid",
-        "Reactome",
-        "CA-HepTh",
-        "Sister_cities",
-    ],
-    output_path="outputs/running_time_exact.toml",
-    K=10, approx=false, inc=true
-)
+
+# BLAS.set_num_threads(32)
+
+# ComputeMarginError(tot_d;
+#     graph_indices=[
+#         "Hamsterster_households",
+#         "Euroroads",
+#         "Hamsterster_friends",
+#         "ego-Facebook",
+#         "CA-GrQc",
+#         "US_power_grid",
+#     ],
+#     output_path="outputs/margin_errors.toml",
+#     coeffs=[20, 50, 100, 200],
+#     limits=[0.1, 0.2, 0.3, 0.4, 0.5],
+#     inc=true
+# )
+
+# CompareEffect(tot_d;
+#     graph_indices=[
+#         "Euroroads",
+#         "Hamsterster_friends",
+#         "ego-Facebook",
+#         "CA-GrQc",
+#         "US_power_grid",
+#     ],
+#     output_path="outputs/compare_effects_exact.toml",
+#     K=50, approx=false, inc=true
+# )
+
+# ComputeRunningTime(tot_d;
+#     graph_indices=[
+#         "Zachary_karate_club",
+#         "Contiguous_USA",
+#         "Les_Miserables",
+#         "Jazz_musicians",
+#         "Euroroads",
+#         "Hamsterster_friends",
+#         "ego-Facebook",
+#         "CA-GrQc",
+#         "US_power_grid",
+#         "Reactome",
+#         "CA-HepTh",
+#         "Sister_cities",
+#         "CA-HepPh",
+#         "CAIDA",
+#         "loc-Gowalla",
+#         "com-Amazon",
+#         "Dogster_friends",
+#         "roadNet-PA",
+#         "roadNet-CA",
+#     ],
+#     output_path="outputs/running_time_approx.toml",
+#     K=10, approx=true, inc=true
+# )
+
+# ComputeRunningTime(tot_d;
+#     graph_indices=[
+#         "Zachary_karate_club",
+#         "Contiguous_USA",
+#         "Les_Miserables",
+#         "Jazz_musicians",
+#         "Euroroads",
+#         "Hamsterster_friends",
+#         "ego-Facebook",
+#         "CA-GrQc",
+#         "US_power_grid",
+#         "Reactome",
+#         "CA-HepTh",
+#         "Sister_cities",
+#     ],
+#     output_path="outputs/running_time_exact.toml",
+#     K=10, approx=false, inc=true
+# )
