@@ -327,7 +327,7 @@ function CompareEffect(tot_d::AbstractDict; graph_indices::Vector{String}, outpu
             println("Computing rank set...")
             S = ComputeRankSet(d, sp_A, K)
             println("Computing MANC on rank set...")
-            manc["Top-SANC"] = ComputeMANCSeries(d, sp_A, S, approx)
+            manc["Top-Absorb"] = ComputeMANCSeries(d, sp_A, S, approx)
 
             println("Computing degree set...")
             S = ComputeDegreeSet(d, K)
@@ -368,7 +368,7 @@ function CompareOptimumEffect(tot_d::AbstractDict; graph_indices::Vector{String}
             println("Computing rank set...")
             S = ComputeRankSet(d, sp_A, K)
             println("Computing MANC on rank set...")
-            manc["Top-SANC"] = ComputeMANCSeries(d, sp_A, S)
+            manc["Top-Absorb"] = ComputeMANCSeries(d, sp_A, S)
 
             println("Computing degree set...")
             S = ComputeDegreeSet(d, K)

@@ -1,3 +1,4 @@
+from math import inf
 import numpy as np
 import matplotlib.pyplot as plt
 import toml
@@ -6,6 +7,29 @@ from os import path
 figsize = (8, 8)
 d = {0: '(a)', 1: '(b)', 2: '(c)', 3: '(d)'}
 markers = "so^+xD"
+
+
+def compare_effects_optimum(toml_name, input_dir, output_dir, algos):
+    toml_path = path.join(input_dir, f'{toml_name}.toml')
+    with open(toml_path, "r") as f:
+        toml_obj = toml.load(f)
+    fig, axs = plt.subplots(1, 4, figsize=(16, 4), layout='tight')
+    for i, (graph_name, mancs) in enumerate(toml_obj.items()):
+        ax = axs[i]
+        n = len(mancs[algos[0]])
+        x = np.arange(1, n + 1)
+        max_manc, min_manc = 0.0, inf
+        for j, algo in enumerate(algos):
+            max_manc = max(max_manc, max(mancs[algo]))
+            min_manc = min(min_manc, min(mancs[algo]))
+            ax.plot(x, mancs[algo], label=algo, marker=markers[j])
+        ax.set_xlabel(r'Size $k$ of node set $S$', math_fontfamily='cm')
+        ax.set_ylabel(r'MANC $H(S)$', math_fontfamily='cm')
+        # ax.set_title(f'{d[i]} {graph_name}')
+        ax.text(2, (max_manc - min_manc) * 0.6 + min_manc, graph_name)
+        ax.legend()
+    plt.savefig(path.join(output_dir, f'{toml_name}.eps'))
+    plt.close(fig)
 
 
 def compare_effects(toml_name, input_dir, output_dir, algos):
@@ -17,11 +41,16 @@ def compare_effects(toml_name, input_dir, output_dir, algos):
         ax = axs[(i >> 1) & 1, i & 1]
         n = len(mancs[algos[0]])
         x = np.arange(1, n + 1)
-        for j, algo in enumerate(algos):
-            ax.plot(x, mancs[algo], label=algo, marker=markers[j])
-        ax.set_xlabel(r'$k$')
-        ax.set_ylabel(r'$M(S)$')
-        ax.set_title(f'{d[i]} {graph_name}')
+        max_manc, min_manc = 0.0, inf
+        for _, algo in enumerate(algos):
+            max_manc = max(max_manc, max(mancs[algo]))
+            min_manc = min(min_manc, min(mancs[algo]))
+            ax.plot(x, mancs[algo], label=algo)
+        ax.set_xlabel(r'Size $k$ of node set $S$', math_fontfamily='cm')
+        ax.set_ylabel(r'MANC $H(S)$', math_fontfamily='cm')
+        # ax.set_title(f'{d[i]} {graph_name}')
+        ax.text((n + 1) / 2, (max_manc - min_manc) * 0.5 + min_manc,
+                graph_name)
         ax.legend()
     plt.savefig(path.join(output_dir, f'{toml_name}.eps'))
     plt.close(fig)
@@ -54,8 +83,13 @@ def margin_errors(toml_name, input_dir, output_dir, factors, label_prefix):
     plt.close(fig)
 
 
+plt.rc('font', family='serif', size=13)
+
 compare_effects("compare_effects_exact", "outputs", "images",
-                ["Top-SANC", "Exact", "Top-Degree", "Approx"])
+                ["Top-Absorb", "Exact", "Top-Degree", "Approx"])
+
+compare_effects_optimum("compare_effects_optimum", "outputs", "images",
+                        ["Exact", "Approx", "Optimum"])
 
 # compare_effects("compare_effects_optimum", "outputs", "images",
 #                 ["Exact", "Approx", "Optimum"])
