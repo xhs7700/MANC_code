@@ -7,3 +7,5 @@ out.*
 README.*
 *.bz2
 !data/small-graph.txt
+tmp.jl
+temp.jl
