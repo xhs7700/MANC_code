@@ -8,6 +8,7 @@ packages = [
     "TimerOutputs",
     "BenchmarkTools",
     "Caching",
+    "Term",
 ]
 
 Pkg.add(packages)
