@@ -132,13 +132,15 @@ function ComputeApproxMANC(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}
     return d' * x / d_sum
 end
 
-function ComputeMANCSeries(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, S::Vector{Int}, approx::Bool=false)
+function ComputeMANCSeries(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, S::Vector{Int}, step::Int, approx::Bool=false)
     ComputeMANC = approx ? ComputeApproxMANC : ComputeExactMANC
     T, ans = Int[], Float64[]
     d_sum = sum(d)
-    for u in ProgressBar(S)
+    for (i, u) in enumerate(ProgressBar(S))
         push!(T, u)
-        push!(ans, ComputeMANC(d, A, T, d_sum))
+        if i % step == 0
+            push!(ans, ComputeMANC(d, A, T, d_sum))
+        end
     end
     return ans
 end
@@ -300,48 +302,69 @@ function ComputeRankSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K
     return copy(partialsortperm(margin, 1:K; rev=true))
 end
 
-function CompareEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, approx::Bool, inc::Bool)
+function ComputePageRankSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K::Int)
+    alpha = 0.15
+    N = size(A, 1)
+    D = spdiagm(d)
+    L = D - (1 - alpha) * A
+    ans = alpha * D * (inv(Matrix(L)) * fill(1 / N, N))
+    return copy(partialsortperm(ans, 1:K, rev=true))
+end
+
+function CompareEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, step::Int, approx::Bool, inc::Bool)
     println("CompareEffect: Computing different algorithms...")
     mancs = (inc && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Dict{AbstractString,Vector{Float64}}}()
     try
         for graph_index in graph_indices
             graph_name = tot_d[graph_index]["name"]
-            if haskey(mancs, graph_name)
-                continue
+            if !haskey(mancs, graph_name)
+                mancs[graph_name] = Dict{AbstractString,Vector{Float64}}()
             end
             println("graph_name = $graph_name")
-            manc = Dict{AbstractString,Vector{Float64}}()
             d, sp_A = ReadGraph(tot_d[graph_index])
-            N = size(sp_A, 1)
 
-            println("Computing absorb set...")
-            S = ComputeAbsorbSet(d, sp_A, K; approx=true)
-            println("Computing MANC on absorb set...")
-            manc["Approx"] = ComputeMANCSeries(d, sp_A, S, approx)
+            if !haskey(mancs[graph_name], "Approx")
+                println("Computing absorb set...")
+                S = ComputeAbsorbSet(d, sp_A, K; approx=true)
+                println("Computing MANC on absorb set...")
+                mancs[graph_name]["Approx"] = ComputeMANCSeries(d, sp_A, S, step, approx)
+            end
 
-            println("Computing exact set...")
-            S = ComputeAbsorbSet(d, sp_A, K; approx=false)
-            println("Computing MANC on exact set...")
-            manc["Exact"] = ComputeMANCSeries(d, sp_A, S, approx)
+            if !haskey(mancs[graph_name], "Exact")
+                println("Computing exact set...")
+                S = ComputeAbsorbSet(d, sp_A, K; approx=false)
+                println("Computing MANC on exact set...")
+                mancs[graph_name]["Exact"] = ComputeMANCSeries(d, sp_A, S, step, approx)
+            end
 
-            println("Computing rank set...")
-            S = ComputeRankSet(d, sp_A, K)
-            println("Computing MANC on rank set...")
-            manc["Top-Absorb"] = ComputeMANCSeries(d, sp_A, S, approx)
+            if !haskey(mancs[graph_name], "Top-Absorb")
+                println("Computing rank set...")
+                S = ComputeRankSet(d, sp_A, K)
+                println("Computing MANC on rank set...")
+                mancs[graph_name]["Top-Absorb"] = ComputeMANCSeries(d, sp_A, S, step, approx)
+            end
 
-            println("Computing degree set...")
-            S = ComputeDegreeSet(d, K)
-            println("Computing MANC on degree set...")
-            manc["Top-Degree"] = ComputeMANCSeries(d, sp_A, S, approx)
+            if !haskey(mancs[graph_name], "Top-Degree")
+                println("Computing degree set...")
+                S = ComputeDegreeSet(d, K)
+                println("Computing MANC on degree set...")
+                mancs[graph_name]["Top-Degree"] = ComputeMANCSeries(d, sp_A, S, step, approx)
+            end
 
-            mancs[graph_name] = manc
+            if !haskey(mancs[graph_name], "PageRank")
+                println("Computing pagerank set...")
+                S = ComputePageRankSet(d, sp_A, K)
+                println("Computing MANC on pagerank set...")
+                mancs[graph_name]["PageRank"] = ComputeMANCSeries(d, sp_A, S, step, approx)
+            end
+
         end
     finally
         open(io -> TOML.print(io, mancs), output_path, "w")
     end
 end
 
-function CompareOptimumEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, inc::Bool)
+function CompareOptimumEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, step::Int, inc::Bool)
     println("CompareOptimumEffect: Computing different algorithms...")
     mancs = (inc && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Dict{AbstractString,Vector{Float64}}}()
     try
@@ -358,27 +381,27 @@ function CompareOptimumEffect(tot_d::AbstractDict; graph_indices::Vector{String}
             println("Computing absorb set...")
             S = ComputeAbsorbSet(d, sp_A, K; approx=true)
             println("Computing MANC on absorb set...")
-            manc["Approx"] = ComputeMANCSeries(d, sp_A, S)
+            manc["Approx"] = ComputeMANCSeries(d, sp_A, S, step)
 
             println("Computing exact set...")
             S = ComputeAbsorbSet(d, sp_A, K; approx=false)
             println("Computing MANC on exact set...")
-            manc["Exact"] = ComputeMANCSeries(d, sp_A, S)
+            manc["Exact"] = ComputeMANCSeries(d, sp_A, S, step)
 
             println("Computing rank set...")
             S = ComputeRankSet(d, sp_A, K)
             println("Computing MANC on rank set...")
-            manc["Top-Absorb"] = ComputeMANCSeries(d, sp_A, S)
+            manc["Top-Absorb"] = ComputeMANCSeries(d, sp_A, S, step)
 
             println("Computing degree set...")
             S = ComputeDegreeSet(d, K)
             println("Computing MANC on degree set...")
-            manc["Top-Degree"] = ComputeMANCSeries(d, sp_A, S)
+            manc["Top-Degree"] = ComputeMANCSeries(d, sp_A, S, step)
 
             println("Computing optimum set...")
             S = ComputeOptimumSet(d, sp_A, K)
             println("Computing MANC on optimum set...")
-            manc["Optimum"] = ComputeMANCSeries(d, sp_A, S)
+            manc["Optimum"] = ComputeMANCSeries(d, sp_A, S, step)
 
             mancs[graph_name] = manc
         end
@@ -460,16 +483,16 @@ end
 
 const tot_d = TOML.parsefile("graphs.toml")
 
-# CompareOptimumEffect(tot_d;
-#     graph_indices=[
-#         "Zachary_karate_club",
-#         "Zebra",
-#         "Contiguous_USA",
-#         "Les_Miserables",
-#     ],
-#     output_path="outputs/compare_effects_optimum.toml",
-#     K=5, inc=true
-# )
+CompareOptimumEffect(tot_d;
+    graph_indices=[
+        "Zachary_karate_club",
+        "Zebra",
+        "Contiguous_USA",
+        "Les_Miserables",
+    ],
+    output_path="outputs/compare_effects_optimum.toml",
+    K=5, inc=true
+)
 
 
 BLAS.set_num_threads(32)
@@ -489,61 +512,61 @@ BLAS.set_num_threads(32)
 #     inc=true
 # )
 
-# CompareEffect(tot_d;
-#     graph_indices=[
-#         "Euroroads",
-#         "Hamsterster_friends",
-#         "ego-Facebook",
-#         "CA-GrQc",
-#         "US_power_grid",
-#     ],
-#     output_path="outputs/compare_effects_exact.toml",
-#     K=50, approx=false, inc=true
-# )
+CompareEffect(tot_d;
+    graph_indices=[
+        "Euroroads",
+        "Hamsterster_friends",
+        "ego-Facebook",
+        "CA-GrQc",
+        "US_power_grid",
+    ],
+    output_path="outputs/compare_effects_exact.toml",
+    K=50, approx=false, inc=false, step=5
+)
 
 ComputeRunningTime(tot_d;
     graph_indices=[
         "Zachary_karate_club",
         "Zebra",
-        # "Contiguous_USA",
-        # "Les_Miserables",
-        # "Jazz_musicians",
-        # "Euroroads",
-        # "Hamsterster_friends",
-        # "ego-Facebook",
-        # "CA-GrQc",
-        # "US_power_grid",
-        # "Reactome",
-        # "CA-HepTh",
-        # "Sister_cities",
+        "Contiguous_USA",
+        "Les_Miserables",
+        "Jazz_musicians",
+        "Euroroads",
+        "Hamsterster_friends",
+        "ego-Facebook",
+        "CA-GrQc",
+        "US_power_grid",
+        "Reactome",
+        "CA-HepTh",
+        "Sister_cities",
     ],
     output_path="outputs/running_time_exact.toml",
     K=10, approx=false, inc=true
 )
 
-# ComputeRunningTime(tot_d;
-#     graph_indices=[
-#         "Zebra",
-#         "Zachary_karate_club",
-#         "Contiguous_USA",
-#         "Les_Miserables",
-#         "Jazz_musicians",
-#         "Euroroads",
-#         "Hamsterster_friends",
-#         "ego-Facebook",
-#         "CA-GrQc",
-#         "US_power_grid",
-#         "Reactome",
-#         "CA-HepTh",
-#         "Sister_cities",
-#         "CA-HepPh",
-#         "CAIDA",
-#         "loc-Gowalla",
-#         "com-Amazon",
-#         "Dogster_friends",
-#         "roadNet-PA",
-#         "roadNet-CA",
-#     ],
-#     output_path="outputs/running_time_approx.toml",
-#     K=10, approx=true, inc=true
-# )
+ComputeRunningTime(tot_d;
+    graph_indices=[
+        "Zebra",
+        "Zachary_karate_club",
+        "Contiguous_USA",
+        "Les_Miserables",
+        "Jazz_musicians",
+        "Euroroads",
+        "Hamsterster_friends",
+        "ego-Facebook",
+        "CA-GrQc",
+        "US_power_grid",
+        "Reactome",
+        "CA-HepTh",
+        "Sister_cities",
+        "CA-HepPh",
+        "CAIDA",
+        "loc-Gowalla",
+        "com-Amazon",
+        "Dogster_friends",
+        "roadNet-PA",
+        "roadNet-CA",
+    ],
+    output_path="outputs/running_time_approx.toml",
+    K=10, approx=true, inc=true
+)
