@@ -483,19 +483,18 @@ end
 
 const tot_d = TOML.parsefile("graphs.toml")
 
-CompareOptimumEffect(tot_d;
-    graph_indices=[
-        "Zachary_karate_club",
-        "Zebra",
-        "Contiguous_USA",
-        "Les_Miserables",
-    ],
-    output_path="outputs/compare_effects_optimum.toml",
-    K=5, inc=true
-)
+BLAS.set_num_threads(8)
 
-
-BLAS.set_num_threads(32)
+# CompareOptimumEffect(tot_d;
+#     graph_indices=[
+#         "Zachary_karate_club",
+#         "Zebra",
+#         "Contiguous_USA",
+#         "Les_Miserables",
+#     ],
+#     output_path="outputs/compare_effects_optimum.toml",
+#     K=5, inc=true
+# )
 
 # ComputeMarginError(tot_d;
 #     graph_indices=[
@@ -515,58 +514,58 @@ BLAS.set_num_threads(32)
 CompareEffect(tot_d;
     graph_indices=[
         "Euroroads",
-        "Hamsterster_friends",
+        # "Hamsterster_friends",
         "ego-Facebook",
         "CA-GrQc",
         "US_power_grid",
     ],
     output_path="outputs/compare_effects_exact.toml",
-    K=50, approx=false, inc=false, step=5
+    K=50, approx=false, inc=true, step=5
 )
 
-ComputeRunningTime(tot_d;
-    graph_indices=[
-        "Zachary_karate_club",
-        "Zebra",
-        "Contiguous_USA",
-        "Les_Miserables",
-        "Jazz_musicians",
-        "Euroroads",
-        "Hamsterster_friends",
-        "ego-Facebook",
-        "CA-GrQc",
-        "US_power_grid",
-        "Reactome",
-        "CA-HepTh",
-        "Sister_cities",
-    ],
-    output_path="outputs/running_time_exact.toml",
-    K=10, approx=false, inc=true
-)
+# ComputeRunningTime(tot_d;
+#     graph_indices=[
+#         "Zachary_karate_club",
+#         "Zebra",
+#         "Contiguous_USA",
+#         "Les_Miserables",
+#         "Jazz_musicians",
+#         "Euroroads",
+#         "Hamsterster_friends",
+#         "ego-Facebook",
+#         "CA-GrQc",
+#         "US_power_grid",
+#         "Reactome",
+#         "CA-HepTh",
+#         "Sister_cities",
+#     ],
+#     output_path="outputs/running_time_exact.toml",
+#     K=10, approx=false, inc=true
+# )
 
-ComputeRunningTime(tot_d;
-    graph_indices=[
-        "Zebra",
-        "Zachary_karate_club",
-        "Contiguous_USA",
-        "Les_Miserables",
-        "Jazz_musicians",
-        "Euroroads",
-        "Hamsterster_friends",
-        "ego-Facebook",
-        "CA-GrQc",
-        "US_power_grid",
-        "Reactome",
-        "CA-HepTh",
-        "Sister_cities",
-        "CA-HepPh",
-        "CAIDA",
-        "loc-Gowalla",
-        "com-Amazon",
-        "Dogster_friends",
-        "roadNet-PA",
-        "roadNet-CA",
-    ],
-    output_path="outputs/running_time_approx.toml",
-    K=10, approx=true, inc=true
-)
+# ComputeRunningTime(tot_d;
+#     graph_indices=[
+#         "Zebra",
+#         "Zachary_karate_club",
+#         "Contiguous_USA",
+#         "Les_Miserables",
+#         "Jazz_musicians",
+#         "Euroroads",
+#         "Hamsterster_friends",
+#         "ego-Facebook",
+#         "CA-GrQc",
+#         "US_power_grid",
+#         "Reactome",
+#         "CA-HepTh",
+#         "Sister_cities",
+#         "CA-HepPh",
+#         "CAIDA",
+#         "loc-Gowalla",
+#         "com-Amazon",
+#         "Dogster_friends",
+#         "roadNet-PA",
+#         "roadNet-CA",
+#     ],
+#     output_path="outputs/running_time_approx.toml",
+#     K=10, approx=true, inc=true
+# )
