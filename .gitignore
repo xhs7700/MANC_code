@@ -9,3 +9,4 @@ README.*
 !data/small-graph.txt
 tmp.jl
 temp.jl
+outputs/compare_effects

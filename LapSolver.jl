@@ -351,11 +351,11 @@ function CompareEffect(tot_d::AbstractDict; graph_indices::Vector{String}, outpu
                 mancs[graph_name]["Top-Degree"] = ComputeMANCSeries(d, sp_A, S, step, approx)
             end
 
-            if !haskey(mancs[graph_name], "PageRank")
+            if !haskey(mancs[graph_name], "Top-PageRank")
                 println("Computing pagerank set...")
                 S = ComputePageRankSet(d, sp_A, K)
                 println("Computing MANC on pagerank set...")
-                mancs[graph_name]["PageRank"] = ComputeMANCSeries(d, sp_A, S, step, approx)
+                mancs[graph_name]["Top-PageRank"] = ComputeMANCSeries(d, sp_A, S, step, approx)
             end
 
         end

@@ -2,11 +2,31 @@ from math import inf
 import numpy as np
 import matplotlib.pyplot as plt
 import toml
+import os
 from os import path
 
 figsize = (8, 8)
 d = {0: '(a)', 1: '(b)', 2: '(c)', 3: '(d)'}
 markers = "so^+xD"
+
+
+def toml2dat(toml_name, input_dir, output_dir, algos):
+    toml_path = path.join(input_dir, f'{toml_name}.toml')
+    with open(toml_path, "r") as f:
+        toml_obj = toml.load(f)
+    output_dir = path.join(input_dir, output_dir)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    for (graph_name, mancs) in toml_obj.items():
+        graph_dir = os.path.join(output_dir, graph_name)
+        if not os.path.exists(graph_dir):
+            os.makedirs(graph_dir)
+        for algo in algos:
+            algo_path = os.path.join(graph_dir, f'{algo}.dat')
+            with open(algo_path, "w") as f:
+                f.write('k\tMANC\n')
+                for i, manc in enumerate(mancs[algo]):
+                    f.write(f'{(i+1)}\t{manc}\n')
 
 
 def compare_effects_optimum(toml_name, input_dir, output_dir, algos):
@@ -85,11 +105,17 @@ def margin_errors(toml_name, input_dir, output_dir, factors, label_prefix):
 
 plt.rc('font', family='serif', size=13)
 
-compare_effects("compare_effects_exact", "outputs", "images",
-                ["Top-Absorb", "Exact", "Top-Degree", "Approx"])
+# toml2dat("compare_effects_exact", "outputs", "compare_effects/exact",
+#          ["Top-Absorb", "Exact", "Top-Degree", "Approx", "Top-PageRank"])
 
-compare_effects_optimum("compare_effects_optimum", "outputs", "images",
-                        ["Exact", "Approx", "Optimum"])
+toml2dat("compare_effects_optimum", "outputs", "compare_effects/optimum",
+         ["Exact", "Approx", "Optimum"])
+
+# compare_effects("compare_effects_exact", "outputs", "images",
+#                 ["Top-Absorb", "Exact", "Top-Degree", "Approx"])
+
+# compare_effects_optimum("compare_effects_optimum", "outputs", "images",
+#                         ["Exact", "Approx", "Optimum"])
 
 # compare_effects("compare_effects_optimum", "outputs", "images",
 #                 ["Exact", "Approx", "Optimum"])
