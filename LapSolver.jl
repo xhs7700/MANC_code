@@ -261,18 +261,7 @@ end
 
 function ComputeOptimumSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K::Int)
     N, d_sum = size(A, 1), sum(d)
-    # opt_vec = argmin(S -> ComputeExactMANC(d, A, S, d_sum), Comb(N, K))
-    min_manc = fill(Inf, nthreads())
-    min_manc_arg = [collect(1:K) for _ in 1:nthreads()]
-    for S in ProgressBar(Comb(N, K))
-        t = threadid()
-        manc = ComputeExactMANC(d, A, S, d_sum)
-        if manc < min_manc[t]
-            min_manc[t] = manc
-            min_manc_arg[t] = S
-        end
-    end
-    opt_vec = min_manc_arg[argmin(min_manc)]
+    opt_vec = argmin(S -> ComputeExactMANC(d, A, S, d_sum), ProgressBar(Comb(N, K)))
     opt_set = Set(opt_vec)
     ans = Int[]
     while !isempty(opt_set)
@@ -311,9 +300,9 @@ function ComputePageRankSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64
     return copy(partialsortperm(ans, 1:K, rev=true))
 end
 
-function CompareEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, step::Int, approx::Bool, inc::Bool)
+function CompareEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, step::Int, approx::Bool, inc::Bool, overwrite::Bool)
     println("CompareEffect: Computing different algorithms...")
-    mancs = (inc && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Dict{AbstractString,Vector{Float64}}}()
+    mancs = (overwrite == false && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Dict{AbstractString,Vector{Float64}}}()
     try
         for graph_index in graph_indices
             graph_name = tot_d[graph_index]["name"]
@@ -323,87 +312,78 @@ function CompareEffect(tot_d::AbstractDict; graph_indices::Vector{String}, outpu
             println("graph_name = $graph_name")
             d, sp_A = ReadGraph(tot_d[graph_index])
 
-            if !haskey(mancs[graph_name], "Approx")
+            if !(inc && haskey(mancs[graph_name], "Approx"))
                 println("Computing absorb set...")
                 S = ComputeAbsorbSet(d, sp_A, K; approx=true)
                 println("Computing MANC on absorb set...")
                 mancs[graph_name]["Approx"] = ComputeMANCSeries(d, sp_A, S, step, approx)
             end
 
-            if !haskey(mancs[graph_name], "Exact")
+            if !(inc && haskey(mancs[graph_name], "Exact"))
                 println("Computing exact set...")
                 S = ComputeAbsorbSet(d, sp_A, K; approx=false)
                 println("Computing MANC on exact set...")
                 mancs[graph_name]["Exact"] = ComputeMANCSeries(d, sp_A, S, step, approx)
             end
 
-            if !haskey(mancs[graph_name], "Top-Absorb")
+            if !(inc && haskey(mancs[graph_name], "Top-Absorb"))
                 println("Computing rank set...")
                 S = ComputeRankSet(d, sp_A, K)
                 println("Computing MANC on rank set...")
                 mancs[graph_name]["Top-Absorb"] = ComputeMANCSeries(d, sp_A, S, step, approx)
             end
 
-            if !haskey(mancs[graph_name], "Top-Degree")
+            if !(inc && haskey(mancs[graph_name], "Top-Degree"))
                 println("Computing degree set...")
                 S = ComputeDegreeSet(d, K)
                 println("Computing MANC on degree set...")
                 mancs[graph_name]["Top-Degree"] = ComputeMANCSeries(d, sp_A, S, step, approx)
             end
 
-            if !haskey(mancs[graph_name], "Top-PageRank")
+            if !(inc && haskey(mancs[graph_name], "Top-PageRank"))
                 println("Computing pagerank set...")
                 S = ComputePageRankSet(d, sp_A, K)
                 println("Computing MANC on pagerank set...")
                 mancs[graph_name]["Top-PageRank"] = ComputeMANCSeries(d, sp_A, S, step, approx)
             end
-
         end
     finally
         open(io -> TOML.print(io, mancs), output_path, "w")
     end
 end
 
-function CompareOptimumEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, step::Int, inc::Bool)
+function CompareOptimumEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, step::Int, inc::Bool, overwrite::Bool)
     println("CompareOptimumEffect: Computing different algorithms...")
-    mancs = (inc && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Dict{AbstractString,Vector{Float64}}}()
+    mancs = (overwrite == false && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Dict{AbstractString,Vector{Float64}}}()
     try
         for graph_index in graph_indices
             graph_name = tot_d[graph_index]["name"]
-            if haskey(mancs, graph_name)
-                continue
+            if !haskey(mancs, graph_name)
+                mancs[graph_name] = Dict{AbstractString,Vector{Float64}}()
             end
             println("graph_name = $graph_name")
-            manc = Dict{AbstractString,Vector{Float64}}()
             d, sp_A = ReadGraph(tot_d[graph_index])
-            N = size(sp_A, 1)
 
-            println("Computing absorb set...")
-            S = ComputeAbsorbSet(d, sp_A, K; approx=true)
-            println("Computing MANC on absorb set...")
-            manc["Approx"] = ComputeMANCSeries(d, sp_A, S, step)
+            if !(inc && haskey(mancs[graph_name], "Approx"))
+                println("Computing absorb set...")
+                S = ComputeAbsorbSet(d, sp_A, K; approx=true)
+                println("Computing MANC on absorb set...")
+                mancs[graph_name]["Approx"] = ComputeMANCSeries(d, sp_A, S, step)
+            end
 
-            println("Computing exact set...")
-            S = ComputeAbsorbSet(d, sp_A, K; approx=false)
-            println("Computing MANC on exact set...")
-            manc["Exact"] = ComputeMANCSeries(d, sp_A, S, step)
+            if !(inc && haskey(mancs[graph_name], "Exact"))
+                println("Computing exact set...")
+                S = ComputeAbsorbSet(d, sp_A, K; approx=false)
+                println("Computing MANC on exact set...")
+                mancs[graph_name]["Exact"] = ComputeMANCSeries(d, sp_A, S, step)
+            end
 
-            println("Computing rank set...")
-            S = ComputeRankSet(d, sp_A, K)
-            println("Computing MANC on rank set...")
-            manc["Top-Absorb"] = ComputeMANCSeries(d, sp_A, S, step)
-
-            println("Computing degree set...")
-            S = ComputeDegreeSet(d, K)
-            println("Computing MANC on degree set...")
-            manc["Top-Degree"] = ComputeMANCSeries(d, sp_A, S, step)
-
-            println("Computing optimum set...")
-            S = ComputeOptimumSet(d, sp_A, K)
-            println("Computing MANC on optimum set...")
-            manc["Optimum"] = ComputeMANCSeries(d, sp_A, S, step)
-
-            mancs[graph_name] = manc
+            if !(inc && haskey(mancs[graph_name], "Optimum"))
+                println("Computing optimum set...")
+                S = ComputeOptimumSet(d, sp_A, K)
+                println("Computing MANC on optimum set...")
+                manc["Optimum"] = ComputeMANCSeries(d, sp_A, S, step)
+            end
         end
     finally
         open(io -> TOML.print(io, mancs), output_path, "w")
@@ -485,16 +465,16 @@ const tot_d = TOML.parsefile("graphs.toml")
 
 BLAS.set_num_threads(8)
 
-# CompareOptimumEffect(tot_d;
-#     graph_indices=[
-#         "Zachary_karate_club",
-#         "Zebra",
-#         "Contiguous_USA",
-#         "Les_Miserables",
-#     ],
-#     output_path="outputs/compare_effects_optimum.toml",
-#     K=5, inc=true
-# )
+CompareOptimumEffect(tot_d;
+    graph_indices=[
+        "Zebra",
+        "Zachary_karate_club",
+        "Contiguous_USA",
+        "Les_Miserables",
+    ],
+    output_path="outputs/compare_effects_optimum.toml",
+    K=5, inc=false, step=1, overwrite=false
+)
 
 # ComputeMarginError(tot_d;
 #     graph_indices=[
@@ -511,17 +491,17 @@ BLAS.set_num_threads(8)
 #     inc=true
 # )
 
-CompareEffect(tot_d;
-    graph_indices=[
-        "Euroroads",
-        # "Hamsterster_friends",
-        "ego-Facebook",
-        "CA-GrQc",
-        "US_power_grid",
-    ],
-    output_path="outputs/compare_effects_exact.toml",
-    K=50, approx=false, inc=true, step=5
-)
+# CompareEffect(tot_d;
+#     graph_indices=[
+#         "Euroroads",
+#         # "Hamsterster_friends",
+#         "ego-Facebook",
+#         "CA-GrQc",
+#         "US_power_grid",
+#     ],
+#     output_path="outputs/compare_effects_exact.toml",
+#     K=50, approx=false, inc=true, step=5, overwrite=false
+# )
 
 # ComputeRunningTime(tot_d;
 #     graph_indices=[
