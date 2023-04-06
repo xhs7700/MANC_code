@@ -139,6 +139,19 @@ dir_name = "data/"
 source = "KONECT"
 url = "http://konect.cc/files/download.tsv.petster-hamster-friend.tar.bz2"
 
+[Hamsterster_full]
+name = "Hamsterster full"
+file_name = "Hamsterster_full"
+internal_name = "petster-hamster"
+is_weighted = false
+total_n = 2426
+total_m = 16631
+LCC_n = 2000
+LCC_m = 0
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.petster-hamster.tar.bz2"
+
 [ego-Facebook]
 name = "ego-Facebook"
 file_name = "ego-Facebook"
@@ -189,6 +202,19 @@ dir_name = "data/"
 source = "KONECT"
 url = "http://konect.cc/files/download.tsv.reactome.tar.bz2"
 
+[Route_views]
+name = "Route views"
+file_name = "Route_views"
+internal_name = "as20000102"
+is_weighted = false
+total_n = 6474
+total_m = 13895
+LCC_n = 6474
+LCC_m = 0
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.as20000102.tar.bz2"
+
 [CA-HepTh]
 name = "CA-HepTh"
 file_name = "CA-HepTh"
@@ -214,6 +240,19 @@ dir_name = "data/"
 source = "KONECT"
 url = "http://konect.cc/files/download.tsv.twin.tar.bz2"
 
+[Pretty_Good_Privacy]
+name = "Pretty Good Privacy"
+file_name = "Pretty_Good_Privacy"
+internal_name = "arenas-pgp"
+is_weighted = false
+total_n = 10680
+total_m = 24316
+LCC_n = 10680
+LCC_m = 0
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.arenas-pgp.tar.bz2"
+
 [CA-HepPh]
 name = "CA-HepPh"
 file_name = "CA-HepPh"
@@ -225,6 +264,19 @@ LCC_m = 117649
 dir_name = "data/"
 source = "SNAP"
 url = "http://snap.stanford.edu/data/ca-HepPh.txt.gz"
+
+[CA-AstroPh]
+name = "CA-AstroPh"
+file_name = "CA-AstroPh"
+internal_name = "ca-AstroPh"
+is_weighted = false
+total_n = 18771
+total_m = 198050
+LCC_n = 17903
+LCC_m = 0
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.ca-AstroPh.tar.bz2"
 
 [CAIDA]
 name = "CAIDA"
@@ -238,6 +290,45 @@ LCC_m = 53381
 dir_name = "data/"
 source = "KONECT"
 url = "http://konect.cc/files/download.tsv.as-caida20071105.tar.bz2"
+
+[Brightkite]
+name = "Brightkite"
+file_name = "Brightkite"
+internal_name = "loc-brightkite_edges"
+is_weighted = false
+total_n = 58228
+total_m = 214078
+LCC_n = 56739
+LCC_m = 0
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.loc-brightkite_edges.tar.bz2"
+
+[Livemocha]
+name = "Livemocha"
+file_name = "Livemocha"
+internal_name = "livemocha"
+is_weighted = false
+total_n = 104103
+total_m = 2193083
+LCC_n = 104103
+LCC_m = 0
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.livemocha.tar.bz2"
+
+[WordNet]
+name = "WordNet"
+file_name = "WordNet"
+internal_name = "wordnet-words"
+is_weighted = false
+total_n = 146005
+total_m = 656999
+LCC_n = 145145
+LCC_m = 0
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.wordnet-words.tar.bz2"
 
 [loc-Gowalla]
 name = "loc-Gowalla"
@@ -262,6 +353,19 @@ LCC_m = 925872
 dir_name = "data/"
 source = "SNAP"
 url = "http://snap.stanford.edu/data/bigdata/communities/com-amazon.ungraph.txt.gz"
+
+[com-dblp]
+name = "com-dblp"
+file_name = "com-dblp"
+internal_name = "com-dblp"
+is_weighted = false
+total_n = 317080
+total_m = 1049866
+LCC_n = 317080
+LCC_m = 0
+dir_name = "data/"
+source = "KONECT"
+url = "http://konect.cc/files/download.tsv.com-dblp.tar.bz2"
 
 [Dogster_friends]
 name = "Dogster friends"
