@@ -173,7 +173,7 @@ function ApproxH(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, L::Spars
     Q = MapMatrices(m, M)
     Q = Q * W * B'
     Z = Matrix{Float64}(undef, m, N)
-    for i in ProgressBar(1:m)
+    @threads for i in ProgressBar(1:m)
         Z[i, :] = sol(Q[i, :])
     end
     H = Vector{Float64}(undef, N)
@@ -213,7 +213,7 @@ function ApproxDelta(d::Vector{Float64}, L::SparseMatrixCSC{Float64,Int64}, c::I
     Q = Q * W * B'
     R = R * X
     Z1, Z2 = Matrix{Float64}(undef, m, N), Matrix{Float64}(undef, m, N)
-    for i in ProgressBar(1:m)
+    @threads for i in ProgressBar(1:m)
         Z1[i, :] = sol(Q[i, :])
         Z2[i, :] = sol(R[i, :])
     end
@@ -443,7 +443,7 @@ end
 
 function HKTimer(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, inc::Bool, overwrite::Bool)
     println("Computing running time...")
-    run_times = (overwrite && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Float64}()
+    run_times = (overwrite == false && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Float64}()
     try
         for graph_index in graph_indices
             graph_name = tot_d[graph_index]["name"]
@@ -464,7 +464,7 @@ end
 
 function AGCTimer(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, approx::Bool, inc::Bool, overwrite::Bool)
     println("Computing running time...")
-    run_times = (overwrite && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Float64}()
+    run_times = (overwrite == false && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Float64}()
     try
         for graph_index in graph_indices
             graph_name = tot_d[graph_index]["name"]
