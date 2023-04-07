@@ -483,9 +483,9 @@ end
 
 const tot_d = TOML.parsefile("graphs.toml")
 
-BLAS.set_num_threads(16)
+BLAS.set_num_threads(8)
 
-TestHK(tot_d;
+CompareEffect(tot_d;
     graph_indices=[
         "Hamsterster_households",
         "Euroroads",
@@ -495,98 +495,8 @@ TestHK(tot_d;
         "CA-GrQc",
         "US_power_grid",
         "Reactome",
-        "Route_views",
-        "CA-HepTh",
-        "Sister_cities",
-        "Pretty_Good_Privacy",
-        "CA-HepPh",
-        "CA-AstroPh",
-        "CAIDA",
     ],
-    output_path="outputs/hk_exact.toml",
-    c_List=[10, 15, 25, 40, 90],
+    output_path="outputs/compare_effects_exact.toml",
+    K=50, step=5, approx=false,
     inc=true, overwrite=false
-)
-
-HKTimer(tot_d,
-    graph_indices=[
-        "Euroroads",
-        "Hamsterster_friends",
-        "Hamsterster_full",
-        "ego-Facebook",
-        "CA-GrQc",
-        "US_power_grid",
-        "Reactome",
-        "Route_views",
-        "CA-HepTh",
-        "Sister_cities",
-        "Pretty_Good_Privacy",
-        "CA-HepPh",
-        "CA-AstroPh",
-        "CAIDA",
-        "Brightkite",
-        "Livemocha",
-        "WordNet",
-        "loc-Gowalla",
-        "com-Amazon",
-        "com-dblp",
-        "roadNet-PA",
-        "roadNet-CA",
-        "roadNet-TX",
-        "YouTube",
-    ],
-    output_path="outputs/HK_time_approx.toml",
-    inc=true, overwrite=false
-)
-
-AGCTimer(tot_d,
-    graph_indices=[
-        "Euroroads",
-        "Hamsterster_friends",
-        "Hamsterster_full",
-        "ego-Facebook",
-        "CA-GrQc",
-        "US_power_grid",
-        "Reactome",
-        "Route_views",
-        "CA-HepTh",
-        "Sister_cities",
-        "Pretty_Good_Privacy",
-        "CA-HepPh",
-        "CA-AstroPh",
-        "CAIDA",
-    ],
-    output_path="outputs/AGC_time_exact.toml",
-    K=10, approx=false, inc=true, overwrite=false
-)
-
-AGCTimer(tot_d,
-    graph_indices=[
-        "Euroroads",
-        "Hamsterster_friends",
-        "Hamsterster_full",
-        "ego-Facebook",
-        "CA-GrQc",
-        "US_power_grid",
-        "Reactome",
-        "Route_views",
-        "CA-HepTh",
-        "Sister_cities",
-        "Pretty_Good_Privacy",
-        "CA-HepPh",
-        "CA-AstroPh",
-        "CAIDA",
-        "Brightkite",
-        "Livemocha",
-        "WordNet",
-        "loc-Gowalla",
-        "com-Amazon",
-        "com-dblp",
-        "roadNet-PA",
-        "roadNet-CA",
-        "roadNet-TX",
-        "YouTube",
-    ],
-    output_path="outputs/AGC_time_approx.toml",
-    K=10, approx=true, inc=true, overwrite=false
 )
