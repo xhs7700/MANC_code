@@ -97,7 +97,7 @@ function LapDecomp(L::SparseMatrixCSC{Float64,Int64})
     return B, spdiagm(sqrt.(w)), spdiagm(sqrt.(x))
 end
 
-function ComputeMapMat(N::Int, M::Int)
+function MapMatrices(N::Int, M::Int)
     m = Matrix{Float64}(undef, N, M)
     val = 1 / sqrt(N)
     for i in 1:N*M
@@ -106,7 +106,7 @@ function ComputeMapMat(N::Int, M::Int)
     return m
 end
 
-function ComputeExactMANC(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, S::Vector{Int}, d_sum::Float64)
+function ExactAGC(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, S::Vector{Int}, d_sum::Float64)
     N = size(A, 1)
     mask = trues(N)
     for x in S
@@ -119,7 +119,7 @@ function ComputeExactMANC(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64},
     return x / d_sum
 end
 
-function ComputeApproxMANC(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, S::Vector{Int}, d_sum::Float64)
+function ApproxAGC(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, S::Vector{Int}, d_sum::Float64)
     N = size(A, 1)
     mask = trues(N)
     for x in S
@@ -132,83 +132,97 @@ function ComputeApproxMANC(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}
     return d' * x / d_sum
 end
 
-function ComputeMANCSeries(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, S::Vector{Int}, step::Int, approx::Bool=false)
-    ComputeMANC = approx ? ComputeApproxMANC : ComputeExactMANC
+function AGCSeqs(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, S::Vector{Int}, step::Int, approx::Bool=false)
+    GetAGC = approx ? ApproxAGC : ExactAGC
     T, ans = Int[], Float64[]
     d_sum = sum(d)
     for (i, u) in enumerate(ProgressBar(S))
         push!(T, u)
         if i % step == 0
-            push!(ans, ComputeMANC(d, A, T, d_sum))
+            push!(ans, GetAGC(d, A, T, d_sum))
         end
     end
     return ans
 end
 
-function BaseVector(N::Int, x::Int)
-    v = zeros(Float64, N)
-    v[x] = one(Float64)
-    return v
+function ExactH(d::Vector{Float64}, L::SparseMatrixCSC{Float64,Int64}, d_sum::Float64)
+    N = size(L, 1)
+    J = fill(1 / N, (N, N))
+    pinv_L = inv(Matrix(L) + J) - J
+    vecpi = d ./ d_sum
+    Lpi = pinv_L * vecpi
+    piLpi = dot(vecpi, Lpi)
+    return map(u -> pinv_L[u, u] - 2 * Lpi[u] + piLpi, ProgressBar(1:N))
 end
 
-function ComputeExactInitialMargin(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, L::SparseMatrixCSC{Float64,Int64}, d_sum::Float64)
-    N = size(L, 1)
-    pinv_L = pinv(Matrix(L))
-    Pi = d ./ d_sum
-    e = map(u -> BaseVector(N, u) - Pi, 1:N)
-    return map(u -> -dot(e[u], pinv_L, e[u]), 1:N)
+function ExactHK(d::Vector{Float64}, L::SparseMatrixCSC{Float64,Int64}, d_sum::Float64)
+    H = ExactH(d, L, d_sum)
+    return H, dot(d, H)
 end
 
-function ComputeApproxInitialMargin(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, L::SparseMatrixCSC{Float64,Int64}, d_sum::Float64, c::Int=50)
+ExactInitialDelta(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, L::SparseMatrixCSC{Float64,Int64}, d_sum::Float64) = -ExactH(d, L, d_sum)
+
+function ApproxH(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, L::SparseMatrixCSC{Float64,Int64}, d_sum::Float64, c::Int=25)
     N = size(L, 1)
+    println("Preparing solver...")
     sol = approxchol_lap(A)
+    println("Solver ready.")
     B, W, _ = LapDecomp(L)
     M = size(W, 1)
     m = min(N, ceil(Int, c * log(N)))
-    Q = ComputeMapMat(m, M)
+    Q = MapMatrices(m, M)
     Q = Q * W * B'
     Z = Matrix{Float64}(undef, m, N)
-    @threads for i in ProgressBar(1:m)
+    for i in ProgressBar(1:m)
         Z[i, :] = sol(Q[i, :])
     end
-    margin = Vector{Float64}(undef, N)
+    H = Vector{Float64}(undef, N)
     iter = N >= 500000 ? ProgressBar(1:N) : (1:N)
     Pi = d ./ d_sum
     Z_Pi = Z * Pi
     @threads for u in iter
-        margin[u] = -my_dot(Z[:, u] - Z_Pi)
+        H[u] = my_dot(Z[:, u] - Z_Pi)
     end
-    return margin
+    return H
 end
 
-function ComputeExactMargin(d::Vector{Float64}, L::SparseMatrixCSC{Float64,Int64})
+function ApproxHK(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, L::SparseMatrixCSC{Float64,Int64}, d_sum::Float64, c::Int=25)
+    H = ApproxH(d, A, L, d_sum, c)
+    return H, dot(d, H)
+end
+
+ApproxInitialDelta(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, L::SparseMatrixCSC{Float64,Int64}, d_sum::Float64, c::Int=25) = -ApproxH(d, A, L, d_sum, c)
+
+function ExactDelta(d::Vector{Float64}, L::SparseMatrixCSC{Float64,Int64})
     N = size(L, 1)
     inv_L = inv(Matrix(L))
     sol_d = inv_L * d
     return map(u -> sol_d[u]^2 / inv_L[u, u], 1:N)
 end
 
-function ComputeApproxMargin(d::Vector{Float64}, L::SparseMatrixCSC{Float64,Int64}, c::Int=50)
+function ApproxDelta(d::Vector{Float64}, L::SparseMatrixCSC{Float64,Int64}, c::Int=25)
     N = size(L, 1)
+    println("Preparing solver...")
     sol = approxchol_sddm(L)
+    println("Solver ready.")
     sol_d = sol(d)
     B, W, X = LapDecomp(L)
     M = size(W, 1)
     m = min(N, ceil(Int, c * log(N)))
-    Q, R = ComputeMapMat(m, M), ComputeMapMat(m, N)
+    Q, R = MapMatrices(m, M), MapMatrices(m, N)
     Q = Q * W * B'
     R = R * X
     Z1, Z2 = Matrix{Float64}(undef, m, N), Matrix{Float64}(undef, m, N)
-    @threads for i in ProgressBar(1:m)
+    for i in ProgressBar(1:m)
         Z1[i, :] = sol(Q[i, :])
         Z2[i, :] = sol(R[i, :])
     end
-    margin = Vector{Float64}(undef, N)
+    delta = Vector{Float64}(undef, N)
     iter = N >= 500000 ? ProgressBar(1:N) : (1:N)
     @threads for u in iter
-        margin[u] = sol_d[u]^2 / (my_dot(Z1[:, u]) + my_dot(Z2[:, u]))
+        delta[u] = sol_d[u]^2 / (my_dot(Z1[:, u]) + my_dot(Z2[:, u]))
     end
-    return margin
+    return delta
 end
 
 function SelectNode(margin::Vector{Float64})
@@ -226,7 +240,7 @@ function SelectNode(margin::Vector{Float64})
     return max_margin_arg[argmax(max_margin)]
 end
 
-function ComputeAbsorbSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K::Int; approx::Bool=true)
+function AbsorbSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K::Int; approx::Bool=true)
     N, d_sum = size(A, 1), sum(d)
     L = spdiagm(d) - A
     t = RBTree{Int}()
@@ -235,9 +249,9 @@ function ComputeAbsorbSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64},
         push!(t, i)
     end
     println("Selecting initial node...")
-    ComputeMargin = approx ? ComputeApproxInitialMargin : ComputeExactInitialMargin
-    margin = ComputeMargin(d, A, L, d_sum)
-    u = SelectNode(margin)
+    GetDelta = approx ? ApproxInitialDelta : ExactInitialDelta
+    delta = GetDelta(d, A, L, d_sum)
+    u = SelectNode(delta)
     mask = trues(N)
     mask[u] = 0
     d, L = d[mask], L[mask, mask]
@@ -246,7 +260,7 @@ function ComputeAbsorbSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64},
     delete!(t, t[u])
     for k in 2:K
         println("k = $k")
-        ComputeMargin = approx ? ComputeApproxMargin : ComputeExactMargin
+        ComputeMargin = approx ? ApproxDelta : ExactDelta
         margin = ComputeMargin(d, L)
         u = SelectNode(margin)
         mask = trues(N)
@@ -259,20 +273,20 @@ function ComputeAbsorbSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64},
     return S
 end
 
-function ComputeOptimumSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K::Int)
+function OptimumSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K::Int)
     N, d_sum = size(A, 1), sum(d)
-    opt_vec = argmin(S -> ComputeExactMANC(d, A, S, d_sum), ProgressBar(Comb(N, K)))
+    opt_vec = argmin(S -> ExactAGC(d, A, S, d_sum), ProgressBar(Comb(N, K)))
     opt_set = Set(opt_vec)
     ans = Int[]
     while !isempty(opt_set)
-        node = argmin(u -> ComputeExactMANC(d, A, vcat(ans, u), d_sum), opt_set)
+        node = argmin(u -> ExactAGC(d, A, vcat(ans, u), d_sum), opt_set)
         delete!(opt_set, node)
         append!(ans, node)
     end
     return ans
 end
 
-function ComputeRandomSet(N::Int, K::Int)
+function RandomSet(N::Int, K::Int)
     V, S = Set(1:N), Int[]
     for _ in 1:K
         u = rand(V)
@@ -282,16 +296,16 @@ function ComputeRandomSet(N::Int, K::Int)
     return S
 end
 
-ComputeDegreeSet(d::Vector{Float64}, K::Int) = copy(partialsortperm(d, 1:K; rev=true))
+DegreeSet(d::Vector{Float64}, K::Int) = copy(partialsortperm(d, 1:K; rev=true))
 
-function ComputeRankSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K::Int)
+function RankSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K::Int)
     d_sum = sum(d)
     L = spdiagm(d) - A
-    margin = ComputeApproxInitialMargin(d, A, L, d_sum)
+    margin = ApproxInitialDelta(d, A, L, d_sum)
     return copy(partialsortperm(margin, 1:K; rev=true))
 end
 
-function ComputePageRankSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K::Int)
+function PageRankSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K::Int)
     alpha = 0.15
     N = size(A, 1)
     D = spdiagm(d)
@@ -302,158 +316,164 @@ end
 
 function CompareEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, step::Int, approx::Bool, inc::Bool, overwrite::Bool)
     println("CompareEffect: Computing different algorithms...")
-    mancs = (overwrite == false && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Dict{AbstractString,Vector{Float64}}}()
+    agcseq = (overwrite == false && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Dict{AbstractString,Vector{Float64}}}()
     try
         for graph_index in graph_indices
             graph_name = tot_d[graph_index]["name"]
-            if !haskey(mancs, graph_name)
-                mancs[graph_name] = Dict{AbstractString,Vector{Float64}}()
+            if !haskey(agcseq, graph_name)
+                agcseq[graph_name] = Dict{AbstractString,Vector{Float64}}()
             end
             println("graph_name = $graph_name")
             d, sp_A = ReadGraph(tot_d[graph_index])
 
-            if !(inc && haskey(mancs[graph_name], "Approx"))
+            if !(inc && haskey(agcseq[graph_name], "Approx"))
                 println("Computing absorb set...")
-                S = ComputeAbsorbSet(d, sp_A, K; approx=true)
-                println("Computing MANC on absorb set...")
-                mancs[graph_name]["Approx"] = ComputeMANCSeries(d, sp_A, S, step, approx)
+                S = AbsorbSet(d, sp_A, K; approx=true)
+                println("Computing AGC on absorb set...")
+                agcseq[graph_name]["Approx"] = AGCSeqs(d, sp_A, S, step, approx)
             end
 
-            if !(inc && haskey(mancs[graph_name], "Exact"))
+            if !(inc && haskey(agcseq[graph_name], "Exact"))
                 println("Computing exact set...")
-                S = ComputeAbsorbSet(d, sp_A, K; approx=false)
-                println("Computing MANC on exact set...")
-                mancs[graph_name]["Exact"] = ComputeMANCSeries(d, sp_A, S, step, approx)
+                S = AbsorbSet(d, sp_A, K; approx=false)
+                println("Computing AGC on exact set...")
+                agcseq[graph_name]["Exact"] = AGCSeqs(d, sp_A, S, step, approx)
             end
 
-            if !(inc && haskey(mancs[graph_name], "Top-Absorb"))
+            if !(inc && haskey(agcseq[graph_name], "Top-Absorb"))
                 println("Computing rank set...")
-                S = ComputeRankSet(d, sp_A, K)
-                println("Computing MANC on rank set...")
-                mancs[graph_name]["Top-Absorb"] = ComputeMANCSeries(d, sp_A, S, step, approx)
+                S = RankSet(d, sp_A, K)
+                println("Computing AGC on rank set...")
+                agcseq[graph_name]["Top-Absorb"] = AGCSeqs(d, sp_A, S, step, approx)
             end
 
-            if !(inc && haskey(mancs[graph_name], "Top-Degree"))
+            if !(inc && haskey(agcseq[graph_name], "Top-Degree"))
                 println("Computing degree set...")
-                S = ComputeDegreeSet(d, K)
-                println("Computing MANC on degree set...")
-                mancs[graph_name]["Top-Degree"] = ComputeMANCSeries(d, sp_A, S, step, approx)
+                S = DegreeSet(d, K)
+                println("Computing AGC on degree set...")
+                agcseq[graph_name]["Top-Degree"] = AGCSeqs(d, sp_A, S, step, approx)
             end
 
-            if !(inc && haskey(mancs[graph_name], "Top-PageRank"))
+            if !(inc && haskey(agcseq[graph_name], "Top-PageRank"))
                 println("Computing pagerank set...")
-                S = ComputePageRankSet(d, sp_A, K)
-                println("Computing MANC on pagerank set...")
-                mancs[graph_name]["Top-PageRank"] = ComputeMANCSeries(d, sp_A, S, step, approx)
+                S = PageRankSet(d, sp_A, K)
+                println("Computing AGC on pagerank set...")
+                agcseq[graph_name]["Top-PageRank"] = AGCSeqs(d, sp_A, S, step, approx)
             end
         end
     finally
-        open(io -> TOML.print(io, mancs), output_path, "w")
+        open(io -> TOML.print(io, agcseq), output_path, "w")
     end
 end
 
 function CompareOptimumEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, step::Int, inc::Bool, overwrite::Bool)
     println("CompareOptimumEffect: Computing different algorithms...")
-    mancs = (overwrite == false && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Dict{AbstractString,Vector{Float64}}}()
+    agcseq = (overwrite == false && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Dict{AbstractString,Vector{Float64}}}()
     try
         for graph_index in graph_indices
             graph_name = tot_d[graph_index]["name"]
-            if !haskey(mancs, graph_name)
-                mancs[graph_name] = Dict{AbstractString,Vector{Float64}}()
+            if !haskey(agcseq, graph_name)
+                agcseq[graph_name] = Dict{AbstractString,Vector{Float64}}()
             end
             println("graph_name = $graph_name")
             d, sp_A = ReadGraph(tot_d[graph_index])
 
-            if !(inc && haskey(mancs[graph_name], "Approx"))
+            if !(inc && haskey(agcseq[graph_name], "Approx"))
                 println("Computing absorb set...")
-                S = ComputeAbsorbSet(d, sp_A, K; approx=true)
-                println("Computing MANC on absorb set...")
-                mancs[graph_name]["Approx"] = ComputeMANCSeries(d, sp_A, S, step)
+                S = AbsorbSet(d, sp_A, K; approx=true)
+                println("Computing AGC on absorb set...")
+                agcseq[graph_name]["Approx"] = AGCSeqs(d, sp_A, S, step)
             end
 
-            if !(inc && haskey(mancs[graph_name], "Exact"))
+            if !(inc && haskey(agcseq[graph_name], "Exact"))
                 println("Computing exact set...")
-                S = ComputeAbsorbSet(d, sp_A, K; approx=false)
-                println("Computing MANC on exact set...")
-                mancs[graph_name]["Exact"] = ComputeMANCSeries(d, sp_A, S, step)
+                S = AbsorbSet(d, sp_A, K; approx=false)
+                println("Computing AGC on exact set...")
+                agcseq[graph_name]["Exact"] = AGCSeqs(d, sp_A, S, step)
             end
 
-            if !(inc && haskey(mancs[graph_name], "Optimum"))
+            if !(inc && haskey(agcseq[graph_name], "Optimum"))
                 println("Computing optimum set...")
-                S = ComputeOptimumSet(d, sp_A, K)
-                println("Computing MANC on optimum set...")
-                manc["Optimum"] = ComputeMANCSeries(d, sp_A, S, step)
+                S = OptimumSet(d, sp_A, K)
+                println("Computing AGC on optimum set...")
+                manc["Optimum"] = AGCSeqs(d, sp_A, S, step)
             end
         end
     finally
-        open(io -> TOML.print(io, mancs), output_path, "w")
+        open(io -> TOML.print(io, agcseq), output_path, "w")
     end
 end
 
-function ComputeHistogramData(ratios::Vector{Float64}, limits::Vector{Float64})
-    N = length(ratios)
-    num_limits = length(limits)
-    cnt = zeros(Int, num_limits)
-    for ratio in ratios
-        for (i, limit) in enumerate(limits)
-            if ratio < limit
-                cnt[i] += 1
-                break
-            end
-        end
-    end
-    return cnt ./ N
-end
-
-function ComputeMarginError(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, coeffs::Vector{Int}, limits::Vector{Float64}, inc::Bool)
-    println("Computing margin error...")
-    append!(limits, 1.01)
-    sort!(limits)
-    errors = (inc && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Dict{AbstractString,Any}}()
+function TestHK(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, c_List::Vector{Int}, inc::Bool, overwrite::Bool)
+    println("Executing tests on HK...")
+    data = (overwrite == false && isfile(output_path)) ? TOML.parsefile(output_path) : Dict()
     try
         for graph_index in graph_indices
             graph_name = tot_d[graph_index]["name"]
-            if haskey(errors, graph_name)
-                continue
+            if !haskey(data, graph_name)
+                data[graph_name] = Dict()
             end
             println("graph_name = $graph_name")
             d, sp_A = ReadGraph(tot_d[graph_index])
-            N = size(sp_A, 1)
-            d_sum = sum(d)
             L = spdiagm(d) - sp_A
-            margin = ComputeExactInitialMargin(d, sp_A, L, d_sum)
-            u = SelectNode(margin)
-            mask = trues(N)
-            mask[u] = 0
-            d, L = d[mask], L[mask, mask]
-            exact_margin = ComputeExactMargin(d, L)
-            single_error = Dict{AbstractString,Any}()
-            for coeff in coeffs
-                println("coeff = $coeff")
-                approx_margin = ComputeApproxMargin(d, L, coeff)
-                ratios = @. abs(approx_margin - exact_margin) / exact_margin
-                cnt = ComputeHistogramData(ratios, limits)
-                single_error["$coeff"] = Dict("distribution" => cnt, "mean" => mean(ratios))
+            d_sum = sum(d)
+            if !(inc && haskey(data[graph_name], "Exact"))
+                println("Computing ExactHK...")
+                stats = @timed ExactHK(d, L, d_sum)
+                data[graph_name]["Exact"] = Dict("Kemeny" => stats.value[2], "time" => stats.time)
             end
-            errors[graph_name] = single_error
+            std_kem = data[graph_name]["Exact"]["Kemeny"]
+            if !haskey(data[graph_name], "Approx")
+                data[graph_name]["Approx"] = Dict()
+            end
+            for c in c_List
+                if !(inc && haskey(data[graph_name]["Approx"], string(c)))
+                    println("Computing Approx$c...")
+                    stats = @timed ApproxHK(d, sp_A, L, d_sum, c)
+                    kem = stats.value[2]
+                    err = abs(std_kem - kem) / std_kem
+                    data[graph_name]["Approx"][string(c)] = Dict("Kemeny" => kem, "error" => err, "time" => stats.time)
+                end
+            end
         end
     finally
-        open(io -> TOML.print(io, errors), output_path, "w")
+        open(io -> TOML.print(io, data), output_path, "w")
     end
 end
 
-function ComputeRunningTime(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, approx::Bool, inc::Bool)
+function HKTimer(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, inc::Bool, overwrite::Bool)
     println("Computing running time...")
-    run_times = (inc && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Float64}()
+    run_times = (overwrite && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Float64}()
     try
         for graph_index in graph_indices
             graph_name = tot_d[graph_index]["name"]
-            if haskey(run_times, graph_name)
+            if inc && haskey(run_times, graph_name)
                 continue
             end
             println("graph_name = $graph_name")
             d, sp_A = ReadGraph(tot_d[graph_index])
-            stats = @timed ComputeAbsorbSet(d, sp_A, K; approx=approx)
+            L = spdiagm(d) - sp_A
+            d_sum = sum(d)
+            stats = @timed ApproxHK(d, sp_A, L, d_sum)
+            run_times[graph_name] = stats.time
+        end
+    finally
+        open(io -> TOML.print(io, run_times), output_path, "w")
+    end
+end
+
+function AGCTimer(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, approx::Bool, inc::Bool, overwrite::Bool)
+    println("Computing running time...")
+    run_times = (overwrite && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Float64}()
+    try
+        for graph_index in graph_indices
+            graph_name = tot_d[graph_index]["name"]
+            if inc && haskey(run_times, graph_name)
+                continue
+            end
+            println("graph_name = $graph_name")
+            d, sp_A = ReadGraph(tot_d[graph_index])
+            stats = @timed AbsorbSet(d, sp_A, K; approx=approx)
             run_times[graph_name] = stats.time
         end
     finally
@@ -463,89 +483,110 @@ end
 
 const tot_d = TOML.parsefile("graphs.toml")
 
-BLAS.set_num_threads(8)
+BLAS.set_num_threads(16)
 
-CompareOptimumEffect(tot_d;
+TestHK(tot_d;
     graph_indices=[
-        "Zebra",
-        "Zachary_karate_club",
-        "Contiguous_USA",
-        "Les_Miserables",
+        "Hamsterster_households",
+        "Euroroads",
+        "Hamsterster_friends",
+        "Hamsterster_full",
+        "ego-Facebook",
+        "CA-GrQc",
+        "US_power_grid",
+        "Reactome",
+        "Route_views",
+        "CA-HepTh",
+        "Sister_cities",
+        "Pretty_Good_Privacy",
+        "CA-HepPh",
+        "CA-AstroPh",
+        "CAIDA",
     ],
-    output_path="outputs/compare_effects_optimum.toml",
-    K=5, inc=false, step=1, overwrite=false
+    output_path="outputs/hk_exact.toml",
+    c_List=[10, 15, 25, 40, 90],
+    inc=true, overwrite=false
 )
 
-# ComputeMarginError(tot_d;
-#     graph_indices=[
-#         "Hamsterster_households",
-#         "Euroroads",
-#         "Hamsterster_friends",
-#         "ego-Facebook",
-#         "CA-GrQc",
-#         "US_power_grid",
-#     ],
-#     output_path="outputs/margin_errors.toml",
-#     coeffs=[20, 50, 100, 200],
-#     limits=[0.1, 0.2, 0.3, 0.4, 0.5],
-#     inc=true
-# )
+HKTimer(tot_d,
+    graph_indices=[
+        "Euroroads",
+        "Hamsterster_friends",
+        "Hamsterster_full",
+        "ego-Facebook",
+        "CA-GrQc",
+        "US_power_grid",
+        "Reactome",
+        "Route_views",
+        "CA-HepTh",
+        "Sister_cities",
+        "Pretty_Good_Privacy",
+        "CA-HepPh",
+        "CA-AstroPh",
+        "CAIDA",
+        "Brightkite",
+        "Livemocha",
+        "WordNet",
+        "loc-Gowalla",
+        "com-Amazon",
+        "com-dblp",
+        "roadNet-PA",
+        "roadNet-CA",
+        "roadNet-TX",
+        "YouTube",
+    ],
+    output_path="outputs/HK_time_approx.toml",
+    inc=true, overwrite=false
+)
 
-# CompareEffect(tot_d;
-#     graph_indices=[
-#         "Euroroads",
-#         # "Hamsterster_friends",
-#         "ego-Facebook",
-#         "CA-GrQc",
-#         "US_power_grid",
-#     ],
-#     output_path="outputs/compare_effects_exact.toml",
-#     K=50, approx=false, inc=true, step=5, overwrite=false
-# )
+AGCTimer(tot_d,
+    graph_indices=[
+        "Euroroads",
+        "Hamsterster_friends",
+        "Hamsterster_full",
+        "ego-Facebook",
+        "CA-GrQc",
+        "US_power_grid",
+        "Reactome",
+        "Route_views",
+        "CA-HepTh",
+        "Sister_cities",
+        "Pretty_Good_Privacy",
+        "CA-HepPh",
+        "CA-AstroPh",
+        "CAIDA",
+    ],
+    output_path="outputs/AGC_time_exact.toml",
+    K=10, approx=false, inc=true, overwrite=false
+)
 
-# ComputeRunningTime(tot_d;
-#     graph_indices=[
-#         "Zachary_karate_club",
-#         "Zebra",
-#         "Contiguous_USA",
-#         "Les_Miserables",
-#         "Jazz_musicians",
-#         "Euroroads",
-#         "Hamsterster_friends",
-#         "ego-Facebook",
-#         "CA-GrQc",
-#         "US_power_grid",
-#         "Reactome",
-#         "CA-HepTh",
-#         "Sister_cities",
-#     ],
-#     output_path="outputs/running_time_exact.toml",
-#     K=10, approx=false, inc=true
-# )
-
-# ComputeRunningTime(tot_d;
-#     graph_indices=[
-#         "Zebra",
-#         "Zachary_karate_club",
-#         "Contiguous_USA",
-#         "Les_Miserables",
-#         "Jazz_musicians",
-#         "Euroroads",
-#         "Hamsterster_friends",
-#         "ego-Facebook",
-#         "CA-GrQc",
-#         "US_power_grid",
-#         "Reactome",
-#         "CA-HepTh",
-#         "Sister_cities",
-#         "CA-HepPh",
-#         "CAIDA",
-#         "loc-Gowalla",
-#         "com-Amazon",
-#         "Dogster_friends",
-#         "roadNet-PA",
-#         "roadNet-CA",
-#     ],
-#     output_path="outputs/running_time_approx.toml",
-#     K=10, approx=true, inc=true
-# )
+AGCTimer(tot_d,
+    graph_indices=[
+        "Euroroads",
+        "Hamsterster_friends",
+        "Hamsterster_full",
+        "ego-Facebook",
+        "CA-GrQc",
+        "US_power_grid",
+        "Reactome",
+        "Route_views",
+        "CA-HepTh",
+        "Sister_cities",
+        "Pretty_Good_Privacy",
+        "CA-HepPh",
+        "CA-AstroPh",
+        "CAIDA",
+        "Brightkite",
+        "Livemocha",
+        "WordNet",
+        "loc-Gowalla",
+        "com-Amazon",
+        "com-dblp",
+        "roadNet-PA",
+        "roadNet-CA",
+        "roadNet-TX",
+        "YouTube",
+    ],
+    output_path="outputs/AGC_time_approx.toml",
+    K=10, approx=true, inc=true, overwrite=false
+)

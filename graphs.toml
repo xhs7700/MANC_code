@@ -367,18 +367,18 @@ dir_name = "data/"
 source = "KONECT"
 url = "http://konect.cc/files/download.tsv.com-dblp.tar.bz2"
 
-[Dogster_friends]
-name = "Dogster friends"
-file_name = "Dogster_friends"
-internal_name = "petster-dog-friend"
-is_weighted = false
-total_n = 451710
-total_m = 8543549
-LCC_n = 426485
-LCC_m = 8543321
-dir_name = "data/"
-source = "KONECT"
-url = "http://konect.cc/files/download.tsv.petster-dog-friend.tar.bz2"
+# [Dogster_friends]
+# name = "Dogster friends"
+# file_name = "Dogster_friends"
+# internal_name = "petster-dog-friend"
+# is_weighted = false
+# total_n = 451710
+# total_m = 8543549
+# LCC_n = 426485
+# LCC_m = 8543321
+# dir_name = "data/"
+# source = "KONECT"
+# url = "http://konect.cc/files/download.tsv.petster-dog-friend.tar.bz2"
 
 [roadNet-PA]
 name = "roadNet-PA"
@@ -392,18 +392,18 @@ dir_name = "data/"
 source = "SNAP"
 url = "http://snap.stanford.edu/data/roadNet-PA.txt.gz"
 
-[Skitter]
-name = "Skitter"
-file_name = "Skitter"
-internal_name = "as-skitter"
-is_weighted = false
-total_n = 1696415
-total_m = 11095298
-LCC_n = 1694616
-LCC_m = 11094209
-dir_name = "data/"
-source = "KONECT"
-url = "http://konect.cc/files/download.tsv.as-skitter.tar.bz2"
+# [Skitter]
+# name = "Skitter"
+# file_name = "Skitter"
+# internal_name = "as-skitter"
+# is_weighted = false
+# total_n = 1696415
+# total_m = 11095298
+# LCC_n = 1694616
+# LCC_m = 11094209
+# dir_name = "data/"
+# source = "KONECT"
+# url = "http://konect.cc/files/download.tsv.as-skitter.tar.bz2"
 
 [roadNet-CA]
 name = "roadNet-CA"
@@ -442,15 +442,15 @@ dir_name = "data/"
 source = "KONECT"
 url = "http://konect.cc/files/download.tsv.com-youtube.tar.bz2"
 
-[Flixster]
-name = "Flixster"
-file_name = "Flixster"
-internal_name = "flixster"
-is_weighted = false
-total_n = 2523386
-total_m = 7918801
-LCC_n = 2523386
-LCC_m = 7918801
-dir_name = "data/"
-source = "KONECT"
-url = "http://konect.cc/files/download.tsv.flixster.tar.bz2"
+# [Flixster]
+# name = "Flixster"
+# file_name = "Flixster"
+# internal_name = "flixster"
+# is_weighted = false
+# total_n = 2523386
+# total_m = 7918801
+# LCC_n = 2523386
+# LCC_m = 7918801
+# dir_name = "data/"
+# source = "KONECT"
+# url = "http://konect.cc/files/download.tsv.flixster.tar.bz2"
