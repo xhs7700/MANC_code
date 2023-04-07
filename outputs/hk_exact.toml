@@ -1,0 +1,435 @@
+
+["Sister cities".Approx.40]
+Kemeny = 26563.45492901039
+error = 0.0014043159055550122
+time = 0.992144779
+
+["Sister cities".Approx.10]
+Kemeny = 26576.590450426687
+error = 0.0018995063042852882
+time = 0.108689781
+
+["Sister cities".Approx.15]
+Kemeny = 26493.414699113957
+error = 0.0012361007380159072
+time = 0.248105543
+
+["Sister cities".Approx.25]
+Kemeny = 26521.476808423035
+error = 0.00017819929219028657
+time = 0.320490883
+
+["Sister cities".Approx.90]
+Kemeny = 26548.915935223056
+error = 0.0008562166027169972
+time = 1.356813592
+
+["Sister cities".Exact]
+Kemeny = 26526.20375915741
+time = 14.754714446
+
+[CA-AstroPh.Approx.40]
+Kemeny = 22939.557025885995
+error = 9.301532742593192e-5
+time = 2.912148806
+
+[CA-AstroPh.Approx.10]
+Kemeny = 23015.72977133395
+error = 0.003413909039316237
+time = 0.872907464
+
+[CA-AstroPh.Approx.15]
+Kemeny = 22910.705348687934
+error = 0.001164827655928196
+time = 1.11357657
+
+[CA-AstroPh.Approx.25]
+Kemeny = 23014.17646506356
+error = 0.0033461897389858468
+time = 1.975554685
+
+[CA-AstroPh.Approx.90]
+Kemeny = 22941.001389822522
+error = 0.00015598508237288526
+time = 6.591859894
+
+[CA-AstroPh.Exact]
+Kemeny = 22937.4234939294
+time = 74.076802496
+
+["Hamsterster friends".Approx.40]
+Kemeny = 2138.496593811043
+error = 0.002193381549714974
+time = 0.132836523
+
+["Hamsterster friends".Approx.10]
+Kemeny = 2101.390033830443
+error = 0.015196381395084438
+time = 0.09417194
+
+["Hamsterster friends".Approx.15]
+Kemeny = 2135.2713570438045
+error = 0.0006818940161777034
+time = 0.11964549
+
+["Hamsterster friends".Approx.25]
+Kemeny = 2142.022857004144
+error = 0.0038459432811461815
+time = 0.124175701
+
+["Hamsterster friends".Approx.90]
+Kemeny = 2141.763000064529
+error = 0.003724162911803705
+time = 0.193005831
+
+["Hamsterster friends".Exact]
+Kemeny = 2133.8163204632583
+time = 0.264177715
+
+[CA-HepPh.Approx.40]
+Kemeny = 17169.448797809408
+error = 0.0013462046584531324
+time = 1.729728319
+
+[CA-HepPh.Approx.10]
+Kemeny = 17035.170270339706
+error = 0.009156458946150522
+time = 0.373524254
+
+[CA-HepPh.Approx.15]
+Kemeny = 17122.74085458412
+error = 0.004062952605567274
+time = 0.495445344
+
+[CA-HepPh.Approx.25]
+Kemeny = 17232.956374473928
+error = 0.0023476869286232927
+time = 0.872782827
+
+[CA-HepPh.Approx.90]
+Kemeny = 17215.32768192097
+error = 0.0013223214126863122
+time = 3.067150257
+
+[CA-HepPh.Exact]
+Kemeny = 17192.59354733372
+time = 18.721428404
+
+["Hamsterster households".Approx.40]
+Kemeny = 1025.7652219726574
+error = 0.0009678837098573687
+time = 0.086123721
+
+["Hamsterster households".Approx.10]
+Kemeny = 1024.8792715770028
+error = 0.00010335070209474827
+time = 2.097419349
+
+["Hamsterster households".Approx.15]
+Kemeny = 1026.3650639945101
+error = 0.0015532248642586642
+time = 0.014932179
+
+["Hamsterster households".Approx.25]
+Kemeny = 1025.050650976752
+error = 0.0002705870944034162
+time = 0.100379404
+
+["Hamsterster households".Approx.90]
+Kemeny = 1026.3187670962436
+error = 0.0015080471693168843
+time = 0.155424615
+
+["Hamsterster households".Exact]
+Kemeny = 1024.773360530704
+time = 0.14139742
+
+["Route views".Approx.40]
+Kemeny = 8664.51632259558
+error = 0.0007581203639751422
+time = 0.111228942
+
+["Route views".Approx.10]
+Kemeny = 8665.120320191982
+error = 0.0006884638856383467
+time = 0.074552654
+
+["Route views".Approx.15]
+Kemeny = 8676.249364355339
+error = 0.0005950015259674755
+time = 0.108285494
+
+["Route views".Approx.25]
+Kemeny = 8660.464288012217
+error = 0.0012254243083246643
+time = 0.272272734
+
+["Route views".Approx.90]
+Kemeny = 8667.317194792577
+error = 0.0004351076654534419
+time = 0.259782221
+
+["Route views".Exact]
+Kemeny = 8671.090052542275
+time = 3.99993261
+
+["US power grid".Approx.40]
+Kemeny = 30518.243582407023
+error = 0.011658215961112129
+time = 0.123139312
+
+["US power grid".Approx.10]
+Kemeny = 31187.802219295
+error = 0.033853611782185156
+time = 0.03952679
+
+["US power grid".Approx.15]
+Kemeny = 30657.194578049413
+error = 0.01626434330844859
+time = 0.073691238
+
+["US power grid".Approx.25]
+Kemeny = 30208.011829294934
+error = 0.0013742525003580999
+time = 0.108722904
+
+["US power grid".Approx.90]
+Kemeny = 30043.967588098734
+error = 0.004063698210636003
+time = 0.22121301
+
+["US power grid".Exact]
+Kemeny = 30166.555365157175
+time = 2.012225944
+
+[ego-Facebook.Approx.40]
+Kemeny = 7425.3255428965385
+error = 0.024125362042890824
+time = 0.545900069
+
+[ego-Facebook.Approx.10]
+Kemeny = 7582.438769624534
+error = 0.003476730226588508
+time = 0.156782693
+
+[ego-Facebook.Approx.15]
+Kemeny = 7742.066916900399
+error = 0.017502425438798194
+time = 0.231596092
+
+[ego-Facebook.Approx.25]
+Kemeny = 7349.636403206986
+error = 0.03407281974896926
+time = 0.340843492
+
+[ego-Facebook.Approx.90]
+Kemeny = 7576.917146086985
+error = 0.004202410513535136
+time = 1.129869491
+
+[ego-Facebook.Exact]
+Kemeny = 7608.892837342997
+time = 1.38596116
+
+[CAIDA.Approx.40]
+Kemeny = 31948.803283554254
+error = 0.0005553079247883038
+time = 1.184089515
+
+[CAIDA.Approx.10]
+Kemeny = 31934.291999786998
+error = 0.00010085140354497093
+time = 0.353109979
+
+[CAIDA.Approx.15]
+Kemeny = 31899.186793888268
+error = 0.0009985544110023051
+time = 0.96433789
+
+[CAIDA.Approx.25]
+Kemeny = 31915.578858259345
+error = 0.0004851966220184345
+time = 1.381225316
+
+[CAIDA.Approx.90]
+Kemeny = 31931.926352716237
+error = 2.676535054576239e-5
+time = 2.329913546
+
+[CAIDA.Exact]
+Kemeny = 31931.071706388713
+time = 233.021545527
+
+[Reactome.Approx.40]
+Kemeny = 8709.92575059323
+error = 0.005018268298756057
+time = 0.854392044
+
+[Reactome.Approx.10]
+Kemeny = 8741.066480023132
+error = 0.001460895046464686
+time = 0.273293582
+
+[Reactome.Approx.15]
+Kemeny = 8777.29164937204
+error = 0.002677301163473524
+time = 0.376912317
+
+[Reactome.Approx.25]
+Kemeny = 8749.678835465937
+error = 0.00047705929655314467
+time = 0.567897761
+
+[Reactome.Approx.90]
+Kemeny = 8749.171148493775
+error = 0.0005350551138755877
+time = 1.96811909
+
+[Reactome.Exact]
+Kemeny = 8753.854943347338
+time = 3.446660778
+
+["Pretty Good Privacy".Approx.40]
+Kemeny = 32882.67426543176
+error = 0.0017271915245880007
+time = 0.63950842
+
+["Pretty Good Privacy".Approx.10]
+Kemeny = 32650.811002941184
+error = 0.005336216179954441
+time = 0.534151265
+
+["Pretty Good Privacy".Approx.15]
+Kemeny = 32949.42696745558
+error = 0.0037607243262464496
+time = 0.381003473
+
+["Pretty Good Privacy".Approx.25]
+Kemeny = 32986.992883860534
+error = 0.004905120297012672
+time = 0.360238411
+
+["Pretty Good Privacy".Approx.90]
+Kemeny = 32853.69474378145
+error = 0.0008443687164381468
+time = 1.155773509
+
+["Pretty Good Privacy".Exact]
+Kemeny = 32825.97751528105
+time = 16.404265987
+
+[CA-GrQc.Approx.40]
+Kemeny = 9965.512356618145
+error = 0.0022046064488086088
+time = 0.378326922
+
+[CA-GrQc.Approx.10]
+Kemeny = 9822.125808935823
+error = 0.016561162504816564
+time = 0.085951354
+
+[CA-GrQc.Approx.15]
+Kemeny = 10070.092383235131
+error = 0.008266452647976407
+time = 0.149084568
+
+[CA-GrQc.Approx.25]
+Kemeny = 10114.602093875405
+error = 0.012722980587121204
+time = 0.159759975
+
+[CA-GrQc.Approx.90]
+Kemeny = 9982.430825264099
+error = 0.0005106473750774717
+time = 0.456383387
+
+[CA-GrQc.Exact]
+Kemeny = 9987.530931717885
+time = 1.259647421
+
+[Euroroads.Approx.40]
+Kemeny = 7639.8858886081625
+error = 0.02042229690328613
+time = 0.124146915
+
+[Euroroads.Approx.10]
+Kemeny = 7547.205674704322
+error = 0.032305651233723164
+time = 0.065366214
+
+[Euroroads.Approx.15]
+Kemeny = 8245.129941001214
+error = 0.05718142484080194
+time = 0.129745394
+
+[Euroroads.Approx.25]
+Kemeny = 7685.682708479368
+error = 0.014550279405555944
+time = 0.095241711
+
+[Euroroads.Approx.90]
+Kemeny = 7813.247442327582
+error = 0.0018059294176025781
+time = 0.1149048
+
+[Euroroads.Exact]
+Kemeny = 7799.162704966015
+time = 0.044317935
+
+[CA-HepTh.Approx.40]
+Kemeny = 16232.535756403078
+error = 0.00269004985002097
+time = 0.317876019
+
+[CA-HepTh.Approx.10]
+Kemeny = 16159.873890894243
+error = 0.0017983018556273634
+time = 0.105214774
+
+[CA-HepTh.Approx.15]
+Kemeny = 16284.305049732062
+error = 0.005887859242694762
+time = 0.174034704
+
+[CA-HepTh.Approx.25]
+Kemeny = 16223.808462333858
+error = 0.0021509614995227893
+time = 0.223836721
+
+[CA-HepTh.Approx.90]
+Kemeny = 16179.949919938945
+error = 0.0005581977298328626
+time = 0.467125039
+
+[CA-HepTh.Exact]
+Kemeny = 16188.98657549368
+time = 9.248399855
+
+["Hamsterster full".Approx.40]
+Kemeny = 2756.723752619314
+error = 0.0010010523521509838
+time = 0.128786273
+
+["Hamsterster full".Approx.10]
+Kemeny = 2734.951301155571
+error = 0.008891090691802037
+time = 0.062502087
+
+["Hamsterster full".Approx.15]
+Kemeny = 2761.2489677404765
+error = 0.0006388236563268939
+time = 0.091318553
+
+["Hamsterster full".Approx.25]
+Kemeny = 2759.8115423139006
+error = 0.00011792036048265003
+time = 0.145532936
+
+["Hamsterster full".Approx.90]
+Kemeny = 2752.4271832941445
+error = 0.002558070254384386
+time = 0.585655694
+
+["Hamsterster full".Exact]
+Kemeny = 2759.486142713205
+time = 0.184329979
