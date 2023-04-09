@@ -419,6 +419,7 @@ function TestHK(tot_d::AbstractDict; graph_indices::Vector{String}, output_path:
             d_sum = sum(d)
             if !(inc && haskey(data[graph_name], "Exact"))
                 println("Computing ExactHK...")
+                BLAS.set_num_threads(4)
                 stats = @timed ExactHK(d, L, d_sum)
                 data[graph_name]["Exact"] = Dict("Kemeny" => stats.value[2], "time" => stats.time)
             end
@@ -426,6 +427,7 @@ function TestHK(tot_d::AbstractDict; graph_indices::Vector{String}, output_path:
             if !haskey(data[graph_name], "Approx")
                 data[graph_name]["Approx"] = Dict()
             end
+            BLAS.set_num_threads(16)
             for c in c_List
                 if !(inc && haskey(data[graph_name]["Approx"], string(c)))
                     println("Computing Approx$c...")
@@ -441,21 +443,25 @@ function TestHK(tot_d::AbstractDict; graph_indices::Vector{String}, output_path:
     end
 end
 
-function HKTimer(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, inc::Bool, overwrite::Bool)
+function HKTimer(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, c_List::Vector{Int}, inc::Bool, overwrite::Bool)
     println("Computing running time...")
-    run_times = (overwrite == false && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Float64}()
+    run_times = (overwrite == false && isfile(output_path)) ? TOML.parsefile(output_path) : Dict()
     try
         for graph_index in graph_indices
             graph_name = tot_d[graph_index]["name"]
-            if inc && haskey(run_times, graph_name)
-                continue
+            if !haskey(run_times, graph_name)
+                run_times[graph_name] = Dict()
             end
             println("graph_name = $graph_name")
             d, sp_A = ReadGraph(tot_d[graph_index])
             L = spdiagm(d) - sp_A
             d_sum = sum(d)
-            stats = @timed ApproxHK(d, sp_A, L, d_sum)
-            run_times[graph_name] = stats.time
+            for c in c_List
+                if !(inc && haskey(run_times[graph_name], string(c)))
+                    stats = @timed ApproxHK(d, sp_A, L, d_sum, c)
+                    run_times[graph_name][string(c)] = stats.time
+                end
+            end
         end
     finally
         open(io -> TOML.print(io, run_times), output_path, "w")
@@ -483,20 +489,25 @@ end
 
 const tot_d = TOML.parsefile("graphs.toml")
 
-BLAS.set_num_threads(8)
+BLAS.set_num_threads(16)
 
-CompareEffect(tot_d;
+# function HKTimer(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, inc::Bool, overwrite::Bool)
+
+HKTimer(tot_d;
     graph_indices=[
-        "Hamsterster_households",
-        "Euroroads",
-        "Hamsterster_friends",
-        "Hamsterster_full",
-        "ego-Facebook",
-        "CA-GrQc",
-        "US_power_grid",
-        "Reactome",
+        "CAIDA",
+        # "Brightkite",
+        # "Livemocha",
+        # "WordNet",
+        # "loc-Gowalla",
+        # "com-Amazon",
+        # "com-dblp",
+        # "roadNet-PA",
+        # "roadNet-TX",
+        "roadNet-CA",
+        "YouTube",
     ],
-    output_path="outputs/compare_effects_exact.toml",
-    K=50, step=5, approx=false,
-    inc=true, overwrite=false
+    output_path="outputs/HK_time_approx.toml",
+    c_List=[10, 15, 25, 40],
+    inc=false, overwrite=false
 )
