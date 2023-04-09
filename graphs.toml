@@ -342,18 +342,6 @@ dir_name = "data/"
 source = "SNAP"
 url = "http://snap.stanford.edu/data/loc-gowalla_edges.txt.gz"
 
-[com-Amazon]
-name = "com-Amazon"
-file_name = "com-Amazon"
-is_weighted = false
-total_n = 334863
-total_m = 925872
-LCC_n = 334863
-LCC_m = 925872
-dir_name = "data/"
-source = "SNAP"
-url = "http://snap.stanford.edu/data/bigdata/communities/com-amazon.ungraph.txt.gz"
-
 [com-dblp]
 name = "com-dblp"
 file_name = "com-dblp"
@@ -366,6 +354,18 @@ LCC_m = 1049866
 dir_name = "data/"
 source = "KONECT"
 url = "http://konect.cc/files/download.tsv.com-dblp.tar.bz2"
+
+[com-Amazon]
+name = "com-Amazon"
+file_name = "com-Amazon"
+is_weighted = false
+total_n = 334863
+total_m = 925872
+LCC_n = 334863
+LCC_m = 925872
+dir_name = "data/"
+source = "SNAP"
+url = "http://snap.stanford.edu/data/bigdata/communities/com-amazon.ungraph.txt.gz"
 
 # [Dogster_friends]
 # name = "Dogster friends"
@@ -405,18 +405,6 @@ url = "http://snap.stanford.edu/data/roadNet-PA.txt.gz"
 # source = "KONECT"
 # url = "http://konect.cc/files/download.tsv.as-skitter.tar.bz2"
 
-[roadNet-CA]
-name = "roadNet-CA"
-file_name = "roadNet-CA"
-is_weighted = false
-total_n = 1965206
-total_m = 2766607
-LCC_n = 1957027
-LCC_m = 2760388
-dir_name = "data/"
-source = "SNAP"
-url = "http://snap.stanford.edu/data/roadNet-CA.txt.gz"
-
 [roadNet-TX]
 name = "roadNet-TX"
 file_name = "roadNet-TX"
@@ -428,6 +416,18 @@ LCC_m = 1879201
 dir_name = "data/"
 source = "SNAP"
 url = "http://snap.stanford.edu/data/roadNet-TX.txt.gz"
+
+[roadNet-CA]
+name = "roadNet-CA"
+file_name = "roadNet-CA"
+is_weighted = false
+total_n = 1965206
+total_m = 2766607
+LCC_n = 1957027
+LCC_m = 2760388
+dir_name = "data/"
+source = "SNAP"
+url = "http://snap.stanford.edu/data/roadNet-CA.txt.gz"
 
 [YouTube]
 name = "YouTube"
