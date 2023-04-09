@@ -112,10 +112,10 @@ function ExactAGC(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, S::Vect
     for x in S
         mask[x] = 0
     end
-    d, A = d[mask], A[mask, mask]
-    L = spdiagm(d) - A
+    mask_d, mask_A = d[mask], A[mask, mask]
+    L = spdiagm(mask_d) - mask_A
     inv_L = inv(Matrix(L))
-    x = dot(d, inv_L, d)
+    x = dot(mask_d, inv_L, mask_d)
     return x / d_sum
 end
 
@@ -132,7 +132,7 @@ function ApproxAGC(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, S::Vec
     return d' * x / d_sum
 end
 
-function AGCSeqs(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, S::Vector{Int}, step::Int, approx::Bool=false)
+function AGCSeqs(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, S::Vector{Int}, step::Int=1, approx::Bool=false)
     GetAGC = approx ? ApproxAGC : ExactAGC
     T, ans = Int[], Float64[]
     d_sum = sum(d)
@@ -275,15 +275,20 @@ end
 
 function OptimumSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K::Int)
     N, d_sum = size(A, 1), sum(d)
-    opt_vec = argmin(S -> ExactAGC(d, A, S, d_sum), ProgressBar(Comb(N, K)))
-    opt_set = Set(opt_vec)
-    ans = Int[]
-    while !isempty(opt_set)
-        node = argmin(u -> ExactAGC(d, A, vcat(ans, u), d_sum), opt_set)
-        delete!(opt_set, node)
-        append!(ans, node)
+    min_agc = fill(Inf, nthreads())
+    min_agc_arg = Vector{Vector{Int}}(undef, nthreads())
+
+    S_list = [S for S in ProgressBar(Comb(N, K))]
+
+    @threads for S in S_list
+        t = threadid()
+        agc = ExactAGC(d, A, S, d_sum)
+        if agc < min_agc[t]
+            min_agc[t] = agc
+            min_agc_arg[t] = S
+        end
     end
-    return ans
+    return min_agc_arg[argmin(min_agc)]
 end
 
 function RandomSet(N::Int, K::Int)
@@ -366,7 +371,7 @@ function CompareEffect(tot_d::AbstractDict; graph_indices::Vector{String}, outpu
     end
 end
 
-function CompareOptimumEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, step::Int, inc::Bool, overwrite::Bool)
+function CompareOptimumEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, inc::Bool, overwrite::Bool)
     println("CompareOptimumEffect: Computing different algorithms...")
     agcseq = (overwrite == false && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Dict{AbstractString,Vector{Float64}}}()
     try
@@ -377,26 +382,30 @@ function CompareOptimumEffect(tot_d::AbstractDict; graph_indices::Vector{String}
             end
             println("graph_name = $graph_name")
             d, sp_A = ReadGraph(tot_d[graph_index])
+            d_sum = sum(d)
 
             if !(inc && haskey(agcseq[graph_name], "Approx"))
                 println("Computing absorb set...")
                 S = AbsorbSet(d, sp_A, K; approx=true)
                 println("Computing AGC on absorb set...")
-                agcseq[graph_name]["Approx"] = AGCSeqs(d, sp_A, S, step)
+                agcseq[graph_name]["Approx"] = AGCSeqs(d, sp_A, S)
             end
 
             if !(inc && haskey(agcseq[graph_name], "Exact"))
                 println("Computing exact set...")
                 S = AbsorbSet(d, sp_A, K; approx=false)
                 println("Computing AGC on exact set...")
-                agcseq[graph_name]["Exact"] = AGCSeqs(d, sp_A, S, step)
+                agcseq[graph_name]["Exact"] = AGCSeqs(d, sp_A, S)
             end
 
             if !(inc && haskey(agcseq[graph_name], "Optimum"))
                 println("Computing optimum set...")
-                S = OptimumSet(d, sp_A, K)
-                println("Computing AGC on optimum set...")
-                manc["Optimum"] = AGCSeqs(d, sp_A, S, step)
+                agcseq[graph_name]["Optimum"] = Float64[]
+                for k in 1:K
+                    println("Computing AGC on optimum set with capacity $k...")
+                    S = OptimumSet(d, sp_A, k)
+                    push!(agcseq[graph_name]["Optimum"], ExactAGC(d, sp_A, S, d_sum))
+                end
             end
         end
     finally
