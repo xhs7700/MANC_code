@@ -278,9 +278,13 @@ function OptimumSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K::In
     min_agc = fill(Inf, nthreads())
     min_agc_arg = Vector{Vector{Int}}(undef, nthreads())
 
-    S_list = [S for S in ProgressBar(Comb(N, K))]
+    S_list = Vector{Int}[]
 
-    @threads for S in S_list
+    for S in ProgressBar(Comb(N, K))
+        push!(S_list, S)
+    end
+
+    @threads for S in ProgressBar(S_list)
         t = threadid()
         agc = ExactAGC(d, A, S, d_sum)
         if agc < min_agc[t]
@@ -500,23 +504,15 @@ const tot_d = TOML.parsefile("graphs.toml")
 
 BLAS.set_num_threads(16)
 
-# function HKTimer(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, inc::Bool, overwrite::Bool)
+# function CompareOptimumEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, inc::Bool, overwrite::Bool)
 
-HKTimer(tot_d;
+CompareOptimumEffect(tot_d;
     graph_indices=[
-        "CAIDA",
-        # "Brightkite",
-        # "Livemocha",
-        # "WordNet",
-        # "loc-Gowalla",
-        # "com-Amazon",
-        # "com-dblp",
-        # "roadNet-PA",
-        # "roadNet-TX",
-        "roadNet-CA",
-        "YouTube",
+        "Zebra",
+        "Zachary_karate_club",
+        "Contiguous_USA",
+        "Les_Miserables",
     ],
-    output_path="outputs/HK_time_approx.toml",
-    c_List=[10, 15, 25, 40],
-    inc=false, overwrite=false
+    output_path="outputs/compare_effects_optimum.toml",
+    K=5, inc=true, overwrite=true
 )
