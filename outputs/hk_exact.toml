@@ -318,6 +318,35 @@ time = 1.155773509
 Kemeny = 32825.97751528105
 time = 16.404265987
 
+["Jazz musicians".Approx.40]
+Kemeny = 215.50848512349242
+error = 0.004440516846640233
+time = 0.028668947
+
+["Jazz musicians".Approx.10]
+Kemeny = 218.4161805294299
+error = 0.008991825429088409
+time = 1.843240722
+
+["Jazz musicians".Approx.15]
+Kemeny = 212.28634626980642
+error = 0.019325456945336675
+time = 0.005520539
+
+["Jazz musicians".Approx.25]
+Kemeny = 219.57372024079348
+error = 0.014339177001413956
+time = 0.101529224
+
+["Jazz musicians".Approx.90]
+Kemeny = 216.49890655660994
+error = 0.00013481785302816839
+time = 0.099752366
+
+["Jazz musicians".Exact]
+Kemeny = 216.469722573367
+time = 0.095797218
+
 [CA-GrQc.Approx.40]
 Kemeny = 9965.512356618145
 error = 0.0022046064488086088
