@@ -24,7 +24,7 @@ def toml2dat(toml_name, input_dir, output_dir, algos):
         for algo in algos:
             algo_path = os.path.join(graph_dir, f'{algo}.dat')
             with open(algo_path, "w") as f:
-                f.write('k\tMANC\n')
+                f.write('k\tAGC\n')
                 for i, manc in enumerate(mancs[algo]):
                     f.write(f'{(i+1)}\t{manc}\n')
 

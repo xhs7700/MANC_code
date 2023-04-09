@@ -240,7 +240,7 @@ function SelectNode(margin::Vector{Float64})
     return max_margin_arg[argmax(max_margin)]
 end
 
-function AbsorbSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K::Int; approx::Bool=true)
+function AbsorbSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K::Int; approx::Bool=true, c::Int=25)
     N, d_sum = size(A, 1), sum(d)
     L = spdiagm(d) - A
     t = RBTree{Int}()
@@ -249,8 +249,7 @@ function AbsorbSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K::Int
         push!(t, i)
     end
     println("Selecting initial node...")
-    GetDelta = approx ? ApproxInitialDelta : ExactInitialDelta
-    delta = GetDelta(d, A, L, d_sum)
+    delta = approx ? ApproxInitialDelta(d, A, L, d_sum, c) : ExactInitialDelta(d, A, L, d_sum)
     u = SelectNode(delta)
     mask = trues(N)
     mask[u] = 0
@@ -260,8 +259,7 @@ function AbsorbSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K::Int
     delete!(t, t[u])
     for k in 2:K
         println("k = $k")
-        ComputeMargin = approx ? ApproxDelta : ExactDelta
-        margin = ComputeMargin(d, L)
+        margin = approx ? ApproxDelta(d, L, c) : ExactDelta(d, L)
         u = SelectNode(margin)
         mask = trues(N)
         mask[u] = 0
@@ -481,19 +479,23 @@ function HKTimer(tot_d::AbstractDict; graph_indices::Vector{String}, output_path
     end
 end
 
-function AGCTimer(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, approx::Bool, inc::Bool, overwrite::Bool)
+function AGCTimer(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, c_List::Vector{Int}, K::Int, approx::Bool, inc::Bool, overwrite::Bool)
     println("Computing running time...")
-    run_times = (overwrite == false && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Float64}()
+    run_times = (overwrite == false && isfile(output_path)) ? TOML.parsefile(output_path) : Dict()
     try
         for graph_index in graph_indices
             graph_name = tot_d[graph_index]["name"]
-            if inc && haskey(run_times, graph_name)
-                continue
+            if !haskey(run_times, graph_name)
+                run_times[graph_name] = Dict()
             end
             println("graph_name = $graph_name")
             d, sp_A = ReadGraph(tot_d[graph_index])
-            stats = @timed AbsorbSet(d, sp_A, K; approx=approx)
-            run_times[graph_name] = stats.time
+            for c in c_List
+                if !(inc && haskey(run_times[graph_name], string(c)))
+                    stats = @timed AbsorbSet(d, sp_A, K; approx=approx, c=c)
+                    run_times[graph_name][string(c)] = stats.time
+                end
+            end
         end
     finally
         open(io -> TOML.print(io, run_times), output_path, "w")
@@ -502,17 +504,38 @@ end
 
 const tot_d = TOML.parsefile("graphs.toml")
 
-BLAS.set_num_threads(16)
+BLAS.set_num_threads(8)
 
-# function CompareOptimumEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, inc::Bool, overwrite::Bool)
-
-CompareOptimumEffect(tot_d;
+AGCTimer(tot_d;
     graph_indices=[
-        "Zebra",
-        "Zachary_karate_club",
-        "Contiguous_USA",
         "Les_Miserables",
+        "Jazz_musicians",
+        "Euroroads",
+        "Hamsterster_friends",
+        "Hamsterster_full",
+        "ego-Facebook",
+        "CA-GrQc",
+        "US_power_grid",
+        "Reactome",
+        "Route_views",
+        "CA-HepTh",
+        "Sister_cities",
+        "Pretty_Good_Privacy",
+        "CA-HepPh",
+        "CA-AstroPh",
+        "CAIDA",
+        "Brightkite",
+        "Livemocha",
+        "WordNet",
+        "loc-Gowalla",
+        "com-dblp",
+        "com-Amazon",
+        "roadNet-PA",
+        "roadNet-TX",
+        "roadNet-CA",
+        "YouTube",
     ],
-    output_path="outputs/compare_effects_optimum.toml",
-    K=5, inc=true, overwrite=true
+    output_path="outputs/AGC_time_approx.toml",
+    c_List=[10, 15, 25],
+    K=10, approx=true, inc=true, overwrite=true
 )
