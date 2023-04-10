@@ -240,7 +240,7 @@ function SelectNode(margin::Vector{Float64})
     return max_margin_arg[argmax(max_margin)]
 end
 
-function AbsorbSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K::Int; approx::Bool=true, c::Int=25)
+function AbsorbSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K::Int; approx::Bool, c::Int=25)
     N, d_sum = size(A, 1), sum(d)
     L = spdiagm(d) - A
     t = RBTree{Int}()
@@ -479,7 +479,26 @@ function HKTimer(tot_d::AbstractDict; graph_indices::Vector{String}, output_path
     end
 end
 
-function AGCTimer(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, c_List::Vector{Int}, K::Int, approx::Bool, inc::Bool, overwrite::Bool)
+function AGCExactTimer(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, inc::Bool, overwrite::Bool)
+    println("Computing running time...")
+    run_times = (overwrite == false && isfile(output_path)) ? TOML.parsefile(output_path) : Dict()
+    try
+        for graph_index in graph_indices
+            graph_name = tot_d[graph_index]["name"]
+            if inc && haskey(run_times, graph_name)
+                continue
+            end
+            println("graph_name = $graph_name")
+            d, sp_A = ReadGraph(tot_d[graph_index])
+            stats = @timed AbsorbSet(d, sp_A, K; approx=false)
+            run_times[graph_name] = stats.time
+        end
+    finally
+        open(io -> TOML.print(io, run_times), output_path, "w")
+    end
+end
+
+function AGCApproxTimer(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, c_List::Vector{Int}, K::Int, inc::Bool, overwrite::Bool)
     println("Computing running time...")
     run_times = (overwrite == false && isfile(output_path)) ? TOML.parsefile(output_path) : Dict()
     try
@@ -492,7 +511,7 @@ function AGCTimer(tot_d::AbstractDict; graph_indices::Vector{String}, output_pat
             d, sp_A = ReadGraph(tot_d[graph_index])
             for c in c_List
                 if !(inc && haskey(run_times[graph_name], string(c)))
-                    stats = @timed AbsorbSet(d, sp_A, K; approx=approx, c=c)
+                    stats = @timed AbsorbSet(d, sp_A, K; approx=true, c=c)
                     run_times[graph_name][string(c)] = stats.time
                 end
             end
@@ -504,38 +523,47 @@ end
 
 const tot_d = TOML.parsefile("graphs.toml")
 
-BLAS.set_num_threads(8)
+BLAS.set_num_threads(16)
 
-AGCTimer(tot_d;
+AGCExactTimer(tot_d;
     graph_indices=[
         "Les_Miserables",
         "Jazz_musicians",
+    ],
+    output_path="outputs/AGC_time_exact.toml",
+    K=10, inc=false, overwrite=false
+)
+
+AGCApproxTimer(tot_d;
+    graph_indices=[
+        # "Les_Miserables",
+        # "Jazz_musicians",
         "Euroroads",
-        "Hamsterster_friends",
-        "Hamsterster_full",
-        "ego-Facebook",
-        "CA-GrQc",
-        "US_power_grid",
-        "Reactome",
-        "Route_views",
-        "CA-HepTh",
-        "Sister_cities",
-        "Pretty_Good_Privacy",
-        "CA-HepPh",
-        "CA-AstroPh",
-        "CAIDA",
-        "Brightkite",
-        "Livemocha",
-        "WordNet",
-        "loc-Gowalla",
-        "com-dblp",
-        "com-Amazon",
-        "roadNet-PA",
-        "roadNet-TX",
+        # "Hamsterster_friends",
+        # "Hamsterster_full",
+        # "ego-Facebook",
+        # "CA-GrQc",
+        # "US_power_grid",
+        # "Reactome",
+        # "Route_views",
+        # "CA-HepTh",
+        # "Sister_cities",
+        # "Pretty_Good_Privacy",
+        # "CA-HepPh",
+        # "CA-AstroPh",
+        # "CAIDA",
+        # "Brightkite",
+        # "Livemocha",
+        # "WordNet",
+        # "loc-Gowalla",
+        # "com-dblp",
+        # "com-Amazon",
+        # "roadNet-PA",
+        # "roadNet-TX",
         "roadNet-CA",
-        "YouTube",
+        # "YouTube",
     ],
     output_path="outputs/AGC_time_approx.toml",
     c_List=[10, 15, 25],
-    K=10, approx=true, inc=true, overwrite=true
+    K=10, inc=false, overwrite=false
 )
