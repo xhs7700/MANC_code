@@ -10,7 +10,7 @@ d = {0: '(a)', 1: '(b)', 2: '(c)', 3: '(d)'}
 markers = "so^+xD"
 
 
-def toml2dat(toml_name, input_dir, output_dir, algos):
+def toml2dat(toml_name, input_dir, output_dir, algos, step):
     toml_path = path.join(input_dir, f'{toml_name}.toml')
     with open(toml_path, "r") as f:
         toml_obj = toml.load(f)
@@ -26,7 +26,7 @@ def toml2dat(toml_name, input_dir, output_dir, algos):
             with open(algo_path, "w") as f:
                 f.write('k\tAGC\n')
                 for i, manc in enumerate(mancs[algo]):
-                    f.write(f'{(i+1)}\t{manc}\n')
+                    f.write(f'{(i+1)*step}\t{manc}\n')
 
 
 def compare_effects_optimum(toml_name, input_dir, output_dir, algos):
@@ -105,11 +105,11 @@ def margin_errors(toml_name, input_dir, output_dir, factors, label_prefix):
 
 plt.rc('font', family='serif', size=13)
 
-# toml2dat("compare_effects_exact", "outputs", "compare_effects/exact",
-#          ["Top-Absorb", "Exact", "Top-Degree", "Approx", "Top-PageRank"])
+toml2dat("compare_effects_exact", "outputs", "compare_effects/exact",
+         ["Top-Absorb", "Exact", "Top-Degree", "Approx", "Top-PageRank"], 5)
 
-toml2dat("compare_effects_optimum", "outputs", "compare_effects/optimum",
-         ["Exact", "Approx", "Optimum"])
+# toml2dat("compare_effects_optimum", "outputs", "compare_effects/optimum",
+#          ["Exact", "Approx", "Optimum"])
 
 # compare_effects("compare_effects_exact", "outputs", "images",
 #                 ["Top-Absorb", "Exact", "Top-Degree", "Approx"])
