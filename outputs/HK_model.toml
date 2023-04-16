@@ -1,0 +1,19 @@
+[Koch]
+Kemeny = 2.2019189330180958e7
+time = 45.699744623
+
+[CayleyTree]
+Kemeny = 5.256489345836179e7
+time = 31.47503189
+
+[Pseudofractal]
+Kemeny = 1.3222431802602138e6
+time = 16.714238411
+
+[HanoiExt]
+Kemeny = 9.527446687916236e8
+time = 1027.571662548
+
+[SmallHanoiExt]
+Kemeny = 12156.114503963017
+time = 1.981824709
