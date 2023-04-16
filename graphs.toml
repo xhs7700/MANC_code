@@ -442,6 +442,66 @@ dir_name = "data/"
 source = "KONECT"
 url = "http://konect.cc/files/download.tsv.com-youtube.tar.bz2"
 
+[Pseudofractal]
+name = "Pseudofractal"
+file_name = "Pseudofractal"
+is_weighted = false
+total_n = 797163
+total_m = 1594323
+LCC_n = 797163
+LCC_m = 1594323
+dir_name = "data/"
+args = [12]
+source = "MODEL"
+
+[Koch]
+name = "Koch"
+file_name = "Koch"
+is_weighted = false
+total_n = 2097153
+total_m = 1572862
+LCC_n = 2097153
+LCC_m = 1572862
+dir_name = "data/"
+args = [10]
+source = "MODEL"
+
+[CayleyTree]
+name = "CayleyTree"
+file_name = "CayleyTree"
+is_weighted = false
+total_n = 1572862
+total_m = 1572861
+LCC_n = 1572862
+LCC_m = 1572861
+dir_name = "data/"
+args = [3,19]
+source = "MODEL"
+
+[HanoiExt]
+name = "HanoiExt"
+file_name = "HanoiExt"
+is_weighted = false
+total_n = 2125764
+total_m = 3188646
+LCC_n = 2125764
+LCC_m = 3188646
+dir_name = "data/"
+args = [13]
+source = "MODEL"
+
+[SmallHanoiExt]
+name = "SmallHanoiExt"
+file_name = "SmallHanoiExt"
+is_weighted = false
+total_n = 972
+total_m = 1458
+LCC_n = 972
+LCC_m = 1458
+dir_name = "data/"
+args = [6]
+source = "MODEL"
+
 # [Flixster]
 # name = "Flixster"
 # file_name = "Flixster"

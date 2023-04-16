@@ -105,6 +105,17 @@ function WriteGraph(g::Graph, name::AbstractString, output_path::AbstractString)
     end
 end
 
+function WriteModelGraph(edges::Vector{Tuple{Int,Int}}, N::Int, name::AbstractString, output_path::AbstractString)
+    M = length(edges)
+    open(output_path, "w") do io
+        write(io, "# UnweightedGraph graph: $name\n# Nodes: $N Edges: $M\n")
+        for e in ProgressBar(sort(edges))
+            e_str = join(e, "\t")
+            write(io, "$e_str\n")
+        end
+    end
+end
+
 function PrepareKONECTFile(d::AbstractDict)
     dir_name, internal_name = d["dir_name"], d["internal_name"]
     del_path = "$dir_name$internal_name"
@@ -150,20 +161,130 @@ function PrepareFile(d::AbstractDict)
     is_weighted, source = d["is_weighted"], d["source"]
     dir_name, file_name = d["dir_name"], d["file_name"]
     file_path = joinpath(dir_name, "$file_name.txt")
-    @assert source in ["KONECT", "SNAP", "SELF"]
+    @assert source in ["KONECT", "SNAP", "SELF", "MODEL"]
     println("Preparing $file_path...")
     if !isfile(file_path)
-        source == "SELF" && error("Self-writing dataset not found.")
-        Prepare = source == "KONECT" ? PrepareKONECTFile : PrepareSNAPFile
-        raw_path, del_path = Prepare(d)
-        g = ReadGraph(raw_path, is_weighted)
-        @show size(g)
-        new_g = Renumber(FindLCC(g))
-        println("Writing new graph...")
-        WriteGraph(new_g, d["name"], file_path)
-        rm(del_path, recursive=true)
+        if source == "SELF"
+            error("Self-writing dataset not found.")
+        elseif source == "MODEL"
+            graph_name = d["name"]
+            graph_args = d["args"]
+            graph_func = Dict(
+                "Pseudofractal" => Pseudofractal,
+                "Koch" => Koch,
+                "CayleyTree" => CayleyTree,
+                "HanoiExt" => HanoiExt,
+                "SmallHanoiExt" => HanoiExt
+            )
+            @assert haskey(graph_func, graph_name)
+            edges, N = graph_func[graph_name](graph_args...)
+            println("Writing new graph...")
+            WriteModelGraph(edges, N, graph_name, file_path)
+        else
+            Prepare = source == "KONECT" ? PrepareKONECTFile : PrepareSNAPFile
+            raw_path, del_path = Prepare(d)
+            g = ReadGraph(raw_path, is_weighted)
+            @show size(g)
+            new_g = Renumber(FindLCC(g))
+            println("Writing new graph...")
+            WriteGraph(new_g, d["name"], file_path)
+            rm(del_path, recursive=true)
+        end
     end
 end
+
+function Pseudofractal(g::Int)
+    ans = Tuple{Int,Int}[(1, 2), (2, 3), (3, 1)]
+    N = 3
+    for iter in 1:g
+        M = length(ans)
+        for i in 1:M
+            u, v = ans[i]
+            N += 1
+            push!(ans, (u, N), (N, v))
+        end
+    end
+    return ans, N
+end
+
+function Koch(g::Int)
+    triangles = Tuple{Int,Int,Int}[(1, 2, 3)]
+    N = 3
+    for iter in 1:g
+        M = length(triangles)
+        for i in 1:M
+            for u in triangles[i]
+                push!(triangles, (u, N + 1, N + 2))
+                N += 2
+            end
+        end
+    end
+    ans = Tuple{Int,Int}[]
+    for (x, y, z) in triangles
+        push!(ans, (x, y), (y, z), (z, x))
+    end
+    return ans, N
+end
+
+function CayleyTree(b::Int, g::Int)
+    ans = Tuple{Int,Int}[]
+    leafs = Int[]
+    for leaf in 2:b+1
+        push!(ans, (1, leaf))
+        push!(leafs, leaf)
+    end
+    N = b + 1
+    for iter in 2:g
+        new_leafs = Int[]
+        for leaf in leafs
+            for new_leaf in N+1:N+b-1
+                push!(ans, (leaf, new_leaf))
+                push!(new_leafs, new_leaf)
+            end
+            N += b - 1
+        end
+        leafs = new_leafs
+    end
+    return ans, N
+end
+
+function HanoiExt(g::Int)
+    ans = Tuple{Int,Int}[(1, 2), (2, 3), (3, 1)]
+    inc = 1
+    for iter in 2:g-1
+        inc *= 3
+        M = length(ans)
+        for i in 1:M
+            u, v = ans[i]
+            push!(ans, (u + inc, v + inc), (u + 2 * inc, v + 2 * inc))
+        end
+        for x in 0:2
+            y = (x + 1) % 3
+            u = parse(Int, string(x) * repeat(string(y), iter - 1), base=3) + 1
+            v = parse(Int, string(y) * repeat(string(x), iter - 1), base=3) + 1
+            push!(ans, (u, v))
+        end
+    end
+    inc *= 3
+    M = length(ans)
+    for i in 1:M
+        u, v = ans[i]
+        push!(ans, (u + inc, v + inc), (u + 2 * inc, v + 2 * inc), (u + 3 * inc, v + 3 * inc))
+    end
+    for x in 0:2
+        y = (x + 1) % 3
+        u = parse(Int, string(x) * repeat(string(y), g - 1), base=3) + 1
+        v = parse(Int, string(y) * repeat(string(x), g - 1), base=3) + 1
+        push!(ans, (u, v))
+        u = parse(Int, repeat(string(x), g), base=3) + 1
+        v = parse(Int, "10" * repeat(string(x), g - 1), base=3) + 1
+        push!(ans, (u, v))
+    end
+    N = 4 * 3^(g - 1)
+    return ans, N
+end
+
 const tot_d = TOML.parsefile("graphs.toml")
+
 foreach(PrepareFile, values(tot_d))
-# PrepareFile(tot_d["CA-GrQc"])
+# PrepareFile(tot_d["SmallHanoiExt"])

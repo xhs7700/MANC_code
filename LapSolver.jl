@@ -454,6 +454,28 @@ function TestHK(tot_d::AbstractDict; graph_indices::Vector{String}, output_path:
     end
 end
 
+function ModelHK(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, inc::Bool, overwrite::Bool)
+    println("Computing Kemeny constant of model networks...")
+    data = (overwrite == false && isfile(output_path)) ? TOML.parsefile(output_path) : Dict()
+    try
+        for graph_index in graph_indices
+            graph_name = tot_d[graph_index]["name"]
+            if inc && haskey(data, graph_name)
+                continue
+            end
+            println("graph_name = $graph_name")
+            d, sp_A = ReadGraph(tot_d[graph_index])
+            L = spdiagm(d) - sp_A
+            d_sum = sum(d)
+            stats = @timed ApproxHK(d, sp_A, L, d_sum)
+            kem = stats.value[2]
+            data[graph_name] = Dict("Kemeny" => kem, "time" => stats.time)
+        end
+    finally
+        open(io -> TOML.print(io, data), output_path, "w")
+    end
+end
+
 function HKTimer(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, c_List::Vector{Int}, inc::Bool, overwrite::Bool)
     println("Computing running time...")
     run_times = (overwrite == false && isfile(output_path)) ? TOML.parsefile(output_path) : Dict()
@@ -525,45 +547,14 @@ const tot_d = TOML.parsefile("graphs.toml")
 
 BLAS.set_num_threads(16)
 
-AGCExactTimer(tot_d;
+ModelHK(tot_d;
     graph_indices=[
-        "Les_Miserables",
-        "Jazz_musicians",
+        "SmallHanoiExt",
+        "Pseudofractal",
+        "Koch",
+        "CayleyTree",
+        "HanoiExt",
     ],
-    output_path="outputs/AGC_time_exact.toml",
-    K=10, inc=false, overwrite=false
-)
-
-AGCApproxTimer(tot_d;
-    graph_indices=[
-        # "Les_Miserables",
-        # "Jazz_musicians",
-        "Euroroads",
-        # "Hamsterster_friends",
-        # "Hamsterster_full",
-        # "ego-Facebook",
-        # "CA-GrQc",
-        # "US_power_grid",
-        # "Reactome",
-        # "Route_views",
-        # "CA-HepTh",
-        # "Sister_cities",
-        # "Pretty_Good_Privacy",
-        # "CA-HepPh",
-        # "CA-AstroPh",
-        # "CAIDA",
-        # "Brightkite",
-        # "Livemocha",
-        # "WordNet",
-        # "loc-Gowalla",
-        # "com-dblp",
-        # "com-Amazon",
-        # "roadNet-PA",
-        # "roadNet-TX",
-        "roadNet-CA",
-        # "YouTube",
-    ],
-    output_path="outputs/AGC_time_approx.toml",
-    c_List=[10, 15, 25],
-    K=10, inc=false, overwrite=false
+    output_path="outputs/HK_model.toml",
+    inc=true, overwrite=false
 )
