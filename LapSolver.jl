@@ -97,15 +97,6 @@ function LapDecomp(L::SparseMatrixCSC{Float64,Int64})
     return B, spdiagm(sqrt.(w)), spdiagm(sqrt.(x))
 end
 
-function MapMatrices(N::Int, M::Int)
-    m = Matrix{Float64}(undef, N, M)
-    val = 1 / sqrt(N)
-    for i in 1:N*M
-        m[i] = rand(Bool) ? val : -val
-    end
-    return m
-end
-
 function ExactAGC(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, S::Vector{Int}, d_sum::Float64)
     N = size(A, 1)
     mask = trues(N)
@@ -170,11 +161,14 @@ function ApproxH(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, L::Spars
     B, W, _ = LapDecomp(L)
     M = size(W, 1)
     m = min(N, ceil(Int, c * log(N)))
-    Q = MapMatrices(m, M)
-    Q = Q * W * B'
     Z = Matrix{Float64}(undef, m, N)
+    mapvec = Vector{Float64}(undef, M)
+    val = sqrt(1 / m)
     @threads for i in ProgressBar(1:m)
-        Z[i, :] = sol(Q[i, :])
+        for j in 1:M
+            mapvec[j] = rand(Bool) ? val : -val
+        end
+        Z[i, :] = sol(B * W * mapvec)
     end
     H = Vector{Float64}(undef, N)
     iter = N >= 500000 ? ProgressBar(1:N) : (1:N)
@@ -209,13 +203,18 @@ function ApproxDelta(d::Vector{Float64}, L::SparseMatrixCSC{Float64,Int64}, c::I
     B, W, X = LapDecomp(L)
     M = size(W, 1)
     m = min(N, ceil(Int, c * log(N)))
-    Q, R = MapMatrices(m, M), MapMatrices(m, N)
-    Q = Q * W * B'
-    R = R * X
+    val = sqrt(1 / m)
+    mapvec1, mapvec2 = Vector{Float64}(undef, M), Vector{Float64}(undef, N)
     Z1, Z2 = Matrix{Float64}(undef, m, N), Matrix{Float64}(undef, m, N)
     @threads for i in ProgressBar(1:m)
-        Z1[i, :] = sol(Q[i, :])
-        Z2[i, :] = sol(R[i, :])
+        for j in 1:M
+            mapvec1[j] = rand(Bool) ? val : -val
+        end
+        for j in 1:N
+            mapvec2[j] = rand(Bool) ? val : -val
+        end
+        Z1[i, :] = sol(B * W * mapvec1)
+        Z2[i, :] = sol(X * mapvec2)
     end
     delta = Vector{Float64}(undef, N)
     iter = N >= 500000 ? ProgressBar(1:N) : (1:N)
