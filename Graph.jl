@@ -127,6 +127,20 @@ function getratios(sets1::Vector, sets2::Vector)
     return ratios
 end
 
+function WriteClique(N::Int)
+    M = N * (N - 1) ÷ 2
+    open("data/clique-$N.txt", "w") do io
+        write(io, "# WeightedGraph graph: clique-$N\n# Nodes: $N Edges: $M\n")
+        w = 2
+        for u in 1:N
+            for v in u+1:N
+                write(io, "$u $v $w\n")
+                w += 1
+            end
+        end
+    end
+end
+
 descrip(v) = (min=reduce(min, v; init=Inf), max=reduce(max, v; init=0), mean=mean(v), median=median(v))
 
 const g = Graph("data/Euroroads.txt")
