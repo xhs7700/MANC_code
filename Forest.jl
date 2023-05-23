@@ -196,6 +196,51 @@ function AnotherLE(g::Graph, d::Vector{Float64}, q::Vector{Float64}; R::Int)
     return ans / R
 end
 
+function VarianceReductionLE(g::Graph, d::Vector{Float64}, q::Vector{Float64}; R::Int, alpha::Float64)
+    avg_q, avg_d = mean(q), mean(d)
+    inv_q = inv.(q)
+    # alpha = avg_q / (avg_q + avg_d)
+    N, _ = mysize(g)
+    ans = zeros(Float64, N)
+    for _ in (1:R)
+        next = zeros(Int, N)
+        root = zeros(Int, N)
+        roots = Int[]
+        for src in 1:N
+            u = src
+            while root[u] == 0
+                if rand(Float64) * (q[u] + d[u]) < q[u]
+                    root[u] = u
+                    push!(roots, u)
+                    next[u] = 0
+                else
+                    next[u] = sample(g.adjs[u], g.normalized_weights[u])
+                    u = next[u]
+                end
+            end
+            r = root[u]
+            u = src
+            while root[u] == 0
+                root[u] = r
+                u = next[u]
+            end
+        end
+        for u in roots
+            tmp = 0
+            len = length(g.adjs[u])
+            # tmp = sum(g.weights[u][i] for i in 1:len if root[g.adjs[u][i]] != u)
+            for i in 1:len
+                v, w = g.adjs[u][i], g.weights[u][i]
+                if root[v] != u
+                    tmp += w
+                end
+            end
+            ans[u] += inv_q[u] - alpha * (1 + inv_q[u] * tmp)
+        end
+    end
+    return fill(alpha, N) + (ans / R)
+end
+
 function getdelta(ans::Matrix{Float64}, A::SparseMatrixCSC{Float64,Int64}, q::Vector{Float64}, ratios::Vector{Float64}, fa::Matrix{Int})
     R, N = size(ans)
     delta = -ans
