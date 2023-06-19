@@ -6,6 +6,7 @@ using Statistics
 using Random
 using Base
 using StatsBase
+using TOML
 
 my_display(x) = display(x), println()
 
@@ -43,25 +44,31 @@ function subindices(N::Int, S::Vector{Int})
     return mask
 end
 
-function subvec(v::AbstractVector, S::Vector{Int})
+function subindices(N::Int, s::Int)
+    mask = trues(N)
+    mask[s] = false
+    return mask
+end
+
+function subvec(v::AbstractVector, S::Union{Vector{Int},Int})
     N = length(v)
     mask = subindices(N, S)
     return v[mask]
 end
 
-function submat(L::AbstractMatrix, S::Vector{Int})
+function submat(L::AbstractMatrix, S::Union{Vector{Int},Int})
     N = size(L, 1)
     mask = subindices(N, S)
     return L[mask, mask]
 end
 
-function subrowmat(L::AbstractMatrix, S::Vector{Int})
+function subrowmat(L::AbstractMatrix, S::Union{Vector{Int},Int})
     N = size(L, 1)
     mask = subindices(N, S)
     return L[mask, :]
 end
 
-function subcolmat(L::AbstractMatrix, S::Vector{Int})
+function subcolmat(L::AbstractMatrix, S::Union{Vector{Int},Int})
     N = size(L, 2)
     mask = subindices(N, S)
     return L[:, mask]
@@ -89,7 +96,7 @@ struct Graph
                 u, v, w = map(x -> parse(Int, x), split(line, ('\t', ' ')))
             else
                 u, v = map(x -> parse(Int, x), split(line, ('\t', ' ')))
-                w = rand(Float64)
+                w = 1
             end
             if u == v
                 continue
@@ -241,14 +248,14 @@ function VarianceReductionLE(g::Graph, d::Vector{Float64}, q::Vector{Float64}; R
     return fill(alpha, N) + (ans / R)
 end
 
-function getdelta(ans::Matrix{Float64}, A::SparseMatrixCSC{Float64,Int64}, q::Vector{Float64}, ratios::Vector{Float64}, fa::Matrix{Int})
+function getdelta(ans::Matrix{Float64}, A::SparseMatrixCSC{Float64,Int64}, q::Vector{Float64}, ratios::Vector{Float64}, fa::Matrix{Int}, removed::BitVector)
     R, N = size(ans)
     delta = -ans
     # delta = zeros(Float64, R, N)
     for r in 1:R
         for u in 1:N
             s = fa[r, u]
-            if s == 0
+            if s == 0 || removed[s] == true
                 continue
             end
             delta[r, s] += ratios[r] / (q[u] + A[u, s])
@@ -261,6 +268,9 @@ function getdelta(ans::Matrix{Float64}, A::SparseMatrixCSC{Float64,Int64}, q::Ve
             if row >= j
                 break
             end
+            if removed[row] == true || removed[j] == true
+                continue
+            end
             for r in 1:R
                 delta[r, row] -= (ans[r, j] * val) / (q[j] + val)
                 delta[r, j] -= (ans[r, row] * val) / (q[row] + val)
@@ -270,60 +280,117 @@ function getdelta(ans::Matrix{Float64}, A::SparseMatrixCSC{Float64,Int64}, q::Ve
     return delta
 end
 
+function std_greedy_set(g::Graph, alpha::Float64, K::Int)
+    d, sp_A = DiagAdj(g)
+    N = size(sp_A, 1)
+    q = (alpha / (1 - alpha)) * d
+    L = diagm(q + d) - sp_A
+    S = Int[]
+    t = RBTree{Int}()
+    for i in 1:N
+        push!(t, i)
+    end
+    for k in 1:K
+        println("k = $k")
+        inv_lap = submat(L, S) |> inv
+        sqinv_lap = inv_lap * inv_lap
+        margin = diag(sqinv_lap) ./ diag(inv_lap)
+        arg = argmax(margin)
+        push!(S, t[arg])
+        delete!(t, t[arg])
+    end
+    return S
+end
+
+function std_diag(g::Graph, alpha::Float64, S::Vector{Int})
+    d, sp_A = DiagAdj(g)
+    q = (alpha / (1 - alpha)) * d
+    return submat(diagm(q + d) - sp_A, S) |> inv |> diag
+end
+
+function approx_diag(g::Graph, alpha::Float64, S::Vector{Int}, R::Int)
+    d, sp_A = DiagAdj(g)
+    N = size(sp_A, 1)
+    q = (alpha / (1 - alpha)) * d
+    weights, ans, sons, fa = LoopErasedMC(g, d, q, sp_A; R=R)
+    ratios = ones(Float64, R)
+    removed = falses(N)
+    for s in S
+        println("s = $s")
+        removed[s] = true
+        s_adj = zip(g.adjs[s], g.weights[s])
+        for (v, w) in s_adj
+            q[v] += w
+        end
+        for r in ProgressBar(1:R)
+            ratio = 1 / weights[r, s]
+            ans[r, :] *= ratio
+            ratios[r] *= ratio
+            for (v, w) in s_adj
+                ans[r, v] *= (q[v] - w) / q[v]
+            end
+            for v in sons[r, s]
+                ans[r, v] += ratios[r] / q[v]
+            end
+            ans[r, s] = 0
+        end
+    end
+    return subvec(vec(sum(ans; dims=1)) / sum(ratios), S)
+end
+
+function std_margin(g::Graph, alpha::Float64, S::Vector{Int})
+    d, sp_A = DiagAdj(g)
+    q = (alpha / (1 - alpha)) * d
+    inv_lap = submat(diagm(q + d) - Matrix(sp_A), S) |> inv
+    sqinv_lap = inv_lap * inv_lap
+    margin = diag(sqinv_lap) ./ diag(inv_lap)
+    return margin
+end
+
+function approx_margin(g::Graph, alpha::Float64, S::Vector{Int}, R::Int)
+    d, sp_A = DiagAdj(g)
+    N = size(sp_A, 1)
+    q = (alpha / (1 - alpha)) * d
+    weights, ans, sons, fa = LoopErasedMC(g, d, q, sp_A; R=R)
+    ratios = ones(Float64, R)
+    removed = falses(N)
+    for s in S
+        println("s = $s")
+        removed[s] = true
+        s_adj = zip(g.adjs[s], g.weights[s])
+        for (v, w) in s_adj
+            q[v] += w
+        end
+        for r in ProgressBar(1:R)
+            ratio = 1 / weights[r, s]
+            ans[r, :] *= ratio
+            ratios[r] *= ratio
+            for (v, w) in s_adj
+                ans[r, v] *= (q[v] - w) / q[v]
+            end
+            for v in sons[r, s]
+                ans[r, v] += ratios[r] / q[v]
+            end
+            ans[r, s] = 0
+        end
+        # writeratio("ans_sum.csv", ans_sum, vec(sum(ans; dims=2)))
+    end
+    ans_sum = vec(sum(ans; dims=2))
+    delta = getdelta(ans, sp_A, q, ratios, fa, removed)
+    margin = zeros(Float64, N)
+    for u in ProgressBar(1:N)
+        margin[u] = sum(ans_sum) / sum(ratios) - sum((ans_sum + delta[:, u]) ./ weights[:, u]) / sum(ratios ./ weights[:, u])
+    end
+    return margin
+end
+
 # Random.seed!(19260817)
 const g = Graph("data/Euroroads.txt"; weight=false)
-const alpha = 0.15
-const R = 500
+const alpha = 0.05
+const R = 1000
+const N = mysize(g)[1]
+const S = Int[]
 
-d, sp_A = DiagAdj(g)
-N = size(sp_A, 1)
-q = (alpha / (1 - alpha)) * d
-L = diagm(d) - Matrix(sp_A)
-
-S = sortperm(d; rev=true)[1:5]
-# S = [1, 2]
-@show S
-
-# init_K = kerneldiag(L, q)
-# K = kerneldiag(submat(L + diagm(q), S))
-
-init_K = diag(inv(L + diagm(q)))
-K = diag(inv(submat(L + diagm(q), S)))
-
-weights, ans, sons, fa = LoopErasedMC(g, d, q, sp_A; R=R)
-
-writeratio("init2test.csv", init_K, (vec(sum(ans; dims=1)) / R))
-
-ratios = ones(Float64, R)
-ans_sum = vec(sum(ans; dims=2))
-# writeratio("ans.csv", vec(sum(ans; dims=2)), ans_sum)
-prefix_S = Int[]
-for s in S
-    println("s = $s")
-    push!(prefix_S, s)
-    delta = getdelta(ans, sp_A, q, ratios, fa)
-    for r in 1:R
-        ans_sum[r] = (ans_sum[r] + delta[r, s]) / weights[r, s]
-    end
-    for r in 1:R
-        ratio = 1 / weights[r, s]
-        for u in 1:N
-            ans[r, u] *= ratio * q[u] / (q[u] + sp_A[u, s])
-        end
-        for u in sons[r, s]
-            ans[r, u] += ratios[r] * ratio / (q[u] + sp_A[u, s])
-        end
-        ans[r, s] = 0
-    end
-    for r in 1:R
-        ratios[r] /= weights[r, s]
-    end
-    # writeratio("ans.csv", vec(sum(ans; dims=2)), ans_sum)
-    # descrip_data = descrip(getratios(vec(sum(ans; dims=2)), ans_sum))
-    # @show descrip_data
-    for u in 1:N
-        q[u] += sp_A[u, s]
-    end
-end
-@show getratio(sum(K), sum(ans_sum) / sum(ratios))
-# writeratio("std2test.csv", K, (subvec(vec(sum(ans; dims=1)), S) / sum(ratios)))
+std = std_diag(g, alpha, S)
+test = approx_diag(g, alpha, S, R)
+writeratio("diag.csv", std, test)
