@@ -1,13 +1,45 @@
 from math import inf
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 import toml
 import os
 from os import path
 
-figsize = (8, 8)
-d = {0: '(a)', 1: '(b)', 2: '(c)', 3: '(d)'}
-markers = "so^+xD"
+pgf_preamble = "\n".join([
+    r"\usepackage[T1]{fontenc}",
+    r"\usepackage{amsfonts}",
+    r"\usepackage[cmintegrals]{newtxmath}",
+    r"\usepackage{fontspec}",
+    r"\usepackage{amsmath}",
+    r"\setmainfont{Times New Roman}",
+])
+
+plt.rcParams.update({
+    "figure.figsize": (7.5, 7.5),
+    "text.usetex": True,
+    "font.family": "serif",
+    "font.serif": "Times New Roman",
+    "font.size": 14.0,
+    "pgf.texsystem": "xelatex",
+    "pgf.rcfonts": False,
+    "pgf.preamble": pgf_preamble,
+    "xtick.color": "black",
+    "ytick.color": "black",
+    # "ytick.minor.visible": True,
+    "axes.labelcolor": "black",
+    "axes.labelsize": "x-large",
+    "axes.edgecolor": "black",
+    "lines.linewidth": 1.0,
+    "legend.fancybox": False,
+    "legend.framealpha": 1.0,
+    "legend.fontsize": 10.75,
+    "savefig.dpi": 1200,
+})
+
+d = ['(a)', '(b)', '(c)', '(d)']
+markers = 'pso*d'
+markersizes = [10, 6, 6, 8, 6]
 
 
 def toml2dat(toml_name, input_dir, output_dir, algos, step=1):
@@ -29,84 +61,89 @@ def toml2dat(toml_name, input_dir, output_dir, algos, step=1):
                     f.write(f'{(i+1)*step}\t{manc}\n')
 
 
-def compare_effects_optimum(toml_name, input_dir, output_dir, algos):
+def compare_effects_optimum(toml_name: str,
+                            input_dir: str,
+                            output_dir: str,
+                            algo_infos: dict[str, str],
+                            scale_type: str,
+                            step: int = 1):
     toml_path = path.join(input_dir, f'{toml_name}.toml')
     with open(toml_path, "r") as f:
         toml_obj = toml.load(f)
-    fig, axs = plt.subplots(1, 4, figsize=(16, 4), layout='tight')
-    for i, (graph_name, mancs) in enumerate(toml_obj.items()):
-        ax = axs[i]
-        n = len(mancs[algos[0]])
-        x = np.arange(1, n + 1)
-        max_manc, min_manc = 0.0, inf
-        for j, algo in enumerate(algos):
-            max_manc = max(max_manc, max(mancs[algo]))
-            min_manc = min(min_manc, min(mancs[algo]))
-            ax.plot(x, mancs[algo], label=algo, marker=markers[j])
-        ax.set_xlabel(r'Size $k$ of node set $S$', math_fontfamily='cm')
-        ax.set_ylabel(r'MANC $H(S)$', math_fontfamily='cm')
-        # ax.set_title(f'{d[i]} {graph_name}')
-        ax.text(2, (max_manc - min_manc) * 0.6 + min_manc, graph_name)
-        ax.legend()
-    plt.savefig(path.join(output_dir, f'{toml_name}.eps'))
-    plt.close(fig)
-
-
-def compare_effects(toml_name, input_dir, output_dir, algos):
-    toml_path = path.join(input_dir, f'{toml_name}.toml')
-    with open(toml_path, "r") as f:
-        toml_obj = toml.load(f)
-    fig, axs = plt.subplots(2, 2, figsize=figsize, layout='tight')
+    fig, axs = plt.subplots(2, 2, layout='compressed')
     for i, (graph_name, mancs) in enumerate(toml_obj.items()):
         ax = axs[(i >> 1) & 1, i & 1]
-        n = len(mancs[algos[0]])
-        x = np.arange(1, n + 1)
-        max_manc, min_manc = 0.0, inf
-        for _, algo in enumerate(algos):
-            max_manc = max(max_manc, max(mancs[algo]))
-            min_manc = min(min_manc, min(mancs[algo]))
-            ax.plot(x, mancs[algo], label=algo)
-        ax.set_xlabel(r'Size $k$ of node set $S$', math_fontfamily='cm')
-        ax.set_ylabel(r'MANC $H(S)$', math_fontfamily='cm')
-        # ax.set_title(f'{d[i]} {graph_name}')
-        ax.text((n + 1) / 2, (max_manc - min_manc) * 0.5 + min_manc,
-                graph_name)
-        ax.legend()
-    plt.savefig(path.join(output_dir, f'{toml_name}.eps'))
+        n = len(list(mancs.values())[0])
+        x = np.arange(step, n * step + 1, step, dtype=np.int32)
+        for j, (algo, info) in enumerate(algo_infos.items()):
+            ax.plot(x,
+                    mancs[algo],
+                    label=info,
+                    marker=markers[j],
+                    ms=markersizes[j])
+        ax.set_yscale(scale_type)
+        ax.set_xlabel(r'$k$')
+        ax.set_ylabel(r'$H\left(S\right)$')
+        ax.text(0.02, 0.03, d[i], transform=ax.transAxes, fontsize='x-large')
+        ax.legend(ncols=2, loc='upper right')
+    plt.savefig(path.join(output_dir, f'{toml_name}.pdf'), backend='pgf')
     plt.close(fig)
 
 
-def margin_errors(toml_name, input_dir, output_dir, factors, label_prefix):
+def compare_effects(toml_name: str,
+                    input_dir: str,
+                    output_dir: str,
+                    algo_infos: dict[str, str],
+                    scale_type: str,
+                    step: int = 1):
     toml_path = path.join(input_dir, f'{toml_name}.toml')
     with open(toml_path, "r") as f:
         toml_obj = toml.load(f)
-    fig, axs = plt.subplots(2, 2, figsize=figsize, layout='tight')
-    x_pos = np.arange(6)
-    xtick_label = [
-        r'$(0,0.1]$', r'$(0.1,0.2]$', r'$(0.2,0.3]$', r'$(0.3,0.4]$',
-        r'$(0.4,0.5]$', r'$(0.5,\infty]$'
-    ]
-    w = 0.2
-    for i, (graph_name, errors) in enumerate(toml_obj.items()):
-        ax = axs[(i >> 1) & 1, i & 1]
-        for j, factor in enumerate(factors):
-            ax.bar(x_pos + j * w,
-                   height=errors[factor]['distribution'],
-                   width=w,
-                   label=f'{label_prefix} = {factor}')
-        ax.set_xlabel(r'$error_u$')
-        ax.set_ylabel('ratio')
-        ax.set_xticks(x_pos + 1.5 * w, xtick_label, fontsize='small')
-        ax.set_title(f'{d[i]} {graph_name}')
-        ax.legend()
-    plt.savefig(path.join(output_dir, f'{toml_name}.eps'))
+    fig, axs = plt.subplots(2, 2, layout='compressed')
+    for i, mancs in enumerate(toml_obj.values()):
+        pos = ((i >> 1) & 1, i & 1)
+        ax = axs[pos]
+        n = len(list(mancs.values())[0])
+        x = np.arange(step, n * step + 1, step, dtype=np.int32)
+        for j, (algo, info) in enumerate(algo_infos.items()):
+            ax.plot(x,
+                    mancs[algo],
+                    label=info,
+                    marker=markers[j],
+                    ms=markersizes[j])
+        ax.set_yscale(scale_type)
+        ax.set_xlabel(r'$k$')
+        ax.set_ylabel(r'$H\left(S\right)$')
+        ax.text(0.02, 0.03, d[i], transform=ax.transAxes, fontsize='x-large')
+    fig.legend(
+        handles=axs[0, 0].get_lines(),
+        #    bbox_to_anchor=(0., 1.02, 1., .102),
+        loc='outside upper right',
+        # mode='expand',
+        ncols=5)
+    plt.savefig(path.join(output_dir, f'{toml_name}.pdf'), backend='pgf')
     plt.close(fig)
 
 
-plt.rc('font', family='serif', size=13)
+# toml2dat("compare_effects_exact", "outputs", "compare_effects/exact",
+#          ["Top-Absorb", "Exact", "Top-Degree", "Approx", "Top-PageRank"], 5)
 
-toml2dat("compare_effects_exact", "outputs", "compare_effects/exact",
-         ["Top-Absorb", "Exact", "Top-Degree", "Approx", "Top-PageRank"], 5)
+# compare_effects_optimum(
+#     "compare_effects_optimum", "outputs", "outputs", {
+#         "Exact": r"\textsc{Deter}",
+#         "Approx": r"\textsc{Approx}",
+#         "Optimum": r"\textsc{Optimum}",
+#         "Random": r"\textsc{Random}",
+#     }, 'linear')
+
+# compare_effects(
+#     "compare_effects_exact", "outputs", "outputs", {
+#         "Exact": r"\textsc{Deter}",
+#         "Approx": r"\textsc{Approx}",
+#         "Top-Absorb": r"\textsc{Top-Absorb}",
+#         "Top-PageRank": r"\textsc{Top-PageRank}",
+#         "Top-Degree": r"\textsc{Top-Degree}",
+#     }, 'linear', 5)
 
 # toml2dat("compare_effects_optimum", "outputs", "compare_effects/optimum",
 #          ["Exact", "Approx", "Optimum"])
