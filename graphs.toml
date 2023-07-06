@@ -75,7 +75,7 @@ source = "KONECT"
 url = "http://konect.cc/files/download.tsv.moreno_train.tar.bz2"
 
 [Les_Miserables]
-name = "Les Misérables"
+name = "Les Miserables"
 file_name = "Les_Miserables"
 internal_name = "moreno_lesmis"
 is_weighted = true

@@ -373,7 +373,7 @@ function CompareEffect(tot_d::AbstractDict; graph_indices::Vector{String}, outpu
 end
 
 function CompareOptimumEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, inc::Bool, overwrite::Bool)
-    println("CompareOptimumEffect: Computing different algorithms...")
+    println("CompareOptimumEffect: Comparing different algorithms...")
     agcseq = (overwrite == false && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Dict{AbstractString,Vector{Float64}}}()
     try
         for graph_index in graph_indices
@@ -383,6 +383,7 @@ function CompareOptimumEffect(tot_d::AbstractDict; graph_indices::Vector{String}
             end
             println("graph_name = $graph_name")
             d, sp_A = ReadGraph(tot_d[graph_index])
+            N = size(sp_A, 1)
             d_sum = sum(d)
 
             if !(inc && haskey(agcseq[graph_name], "Approx"))
@@ -397,6 +398,13 @@ function CompareOptimumEffect(tot_d::AbstractDict; graph_indices::Vector{String}
                 S = AbsorbSet(d, sp_A, K; approx=false)
                 println("Computing AGC on exact set...")
                 agcseq[graph_name]["Exact"] = AGCSeqs(d, sp_A, S)
+            end
+
+            if !(inc && haskey(agcseq[graph_name], "Random"))
+                println("Computing random set...")
+                S = RandomSet(N, K)
+                println("Computing AGC on random set...")
+                agcseq[graph_name]["Random"] = AGCSeqs(d, sp_A, S)
             end
 
             if !(inc && haskey(agcseq[graph_name], "Optimum"))

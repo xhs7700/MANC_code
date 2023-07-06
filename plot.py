@@ -10,7 +10,7 @@ d = {0: '(a)', 1: '(b)', 2: '(c)', 3: '(d)'}
 markers = "so^+xD"
 
 
-def toml2dat(toml_name, input_dir, output_dir, algos, step):
+def toml2dat(toml_name, input_dir, output_dir, algos, step=1):
     toml_path = path.join(input_dir, f'{toml_name}.toml')
     with open(toml_path, "r") as f:
         toml_obj = toml.load(f)
