@@ -66,15 +66,16 @@ def compare_effects_optimum(toml_name: str,
                             output_dir: str,
                             algo_infos: dict[str, str],
                             scale_type: str,
+                            start: int,
                             step: int = 1):
     toml_path = path.join(input_dir, f'{toml_name}.toml')
     with open(toml_path, "r") as f:
         toml_obj = toml.load(f)
     fig, axs = plt.subplots(2, 2, layout='compressed')
-    for i, (graph_name, mancs) in enumerate(toml_obj.items()):
+    for i, mancs in enumerate(toml_obj.values()):
         ax = axs[(i >> 1) & 1, i & 1]
         n = len(list(mancs.values())[0])
-        x = np.arange(step, n * step + 1, step, dtype=np.int32)
+        x = np.arange(start, n * step + start, step, dtype=np.int32)
         for j, (algo, info) in enumerate(algo_infos.items()):
             ax.plot(x,
                     mancs[algo],
@@ -83,7 +84,7 @@ def compare_effects_optimum(toml_name: str,
                     ms=markersizes[j])
         ax.set_yscale(scale_type)
         ax.set_xlabel(r'$k$')
-        ax.set_ylabel(r'$H\left(S\right)$')
+        ax.set_ylabel(r'$H(S)$')
         ax.text(0.02, 0.03, d[i], transform=ax.transAxes, fontsize='x-large')
         ax.legend(ncols=2, loc='upper right')
     plt.savefig(path.join(output_dir, f'{toml_name}.pdf'), backend='pgf')
@@ -95,6 +96,7 @@ def compare_effects(toml_name: str,
                     output_dir: str,
                     algo_infos: dict[str, str],
                     scale_type: str,
+                    start: int,
                     step: int = 1):
     toml_path = path.join(input_dir, f'{toml_name}.toml')
     with open(toml_path, "r") as f:
@@ -104,7 +106,7 @@ def compare_effects(toml_name: str,
         pos = ((i >> 1) & 1, i & 1)
         ax = axs[pos]
         n = len(list(mancs.values())[0])
-        x = np.arange(step, n * step + 1, step, dtype=np.int32)
+        x = np.arange(start, n * step + start, step, dtype=np.int32)
         for j, (algo, info) in enumerate(algo_infos.items()):
             ax.plot(x,
                     mancs[algo],
@@ -113,7 +115,7 @@ def compare_effects(toml_name: str,
                     ms=markersizes[j])
         ax.set_yscale(scale_type)
         ax.set_xlabel(r'$k$')
-        ax.set_ylabel(r'$H\left(S\right)$')
+        ax.set_ylabel(r'$H(S)$')
         ax.text(0.02, 0.03, d[i], transform=ax.transAxes, fontsize='x-large')
     fig.legend(
         handles=axs[0, 0].get_lines(),
@@ -128,22 +130,31 @@ def compare_effects(toml_name: str,
 # toml2dat("compare_effects_exact", "outputs", "compare_effects/exact",
 #          ["Top-Absorb", "Exact", "Top-Degree", "Approx", "Top-PageRank"], 5)
 
-# compare_effects_optimum(
-#     "compare_effects_optimum", "outputs", "outputs", {
-#         "Exact": r"\textsc{Deter}",
-#         "Approx": r"\textsc{Approx}",
-#         "Optimum": r"\textsc{Optimum}",
-#         "Random": r"\textsc{Random}",
-#     }, 'linear')
+compare_effects_optimum(
+    "compare_effects_optimum", "outputs", "outputs", {
+        "Exact": r"\textsc{Deter}",
+        "Approx": r"\textsc{Approx}",
+        "Optimum": r"\textsc{Optimum}",
+        "Random": r"\textsc{Random}",
+    }, 'linear', 2)
 
-# compare_effects(
-#     "compare_effects_exact", "outputs", "outputs", {
-#         "Exact": r"\textsc{Deter}",
-#         "Approx": r"\textsc{Approx}",
-#         "Top-Absorb": r"\textsc{Top-Absorb}",
-#         "Top-PageRank": r"\textsc{Top-PageRank}",
-#         "Top-Degree": r"\textsc{Top-Degree}",
-#     }, 'linear', 5)
+compare_effects(
+    "compare_effects_exact1", "outputs", "outputs", {
+        "Exact": r"\textsc{Deter}",
+        "Approx": r"\textsc{Approx}",
+        "Top-Absorb": r"\textsc{Top-Absorb}",
+        "Top-PageRank": r"\textsc{Top-PageRank}",
+        "Top-Degree": r"\textsc{Top-Degree}",
+    }, 'linear', 10, 5)
+
+compare_effects(
+    "compare_effects_exact2", "outputs", "outputs", {
+        "Exact": r"\textsc{Deter}",
+        "Approx": r"\textsc{Approx}",
+        "Top-Absorb": r"\textsc{Top-Absorb}",
+        "Top-PageRank": r"\textsc{Top-PageRank}",
+        "Top-Degree": r"\textsc{Top-Degree}",
+    }, 'linear', 10, 5)
 
 # toml2dat("compare_effects_optimum", "outputs", "compare_effects/optimum",
 #          ["Exact", "Approx", "Optimum"])

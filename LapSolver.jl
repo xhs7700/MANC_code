@@ -123,13 +123,13 @@ function ApproxAGC(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, S::Vec
     return d' * x / d_sum
 end
 
-function AGCSeqs(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, S::Vector{Int}, step::Int=1, approx::Bool=false)
+function AGCSeqs(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, S::Vector{Int}, start::Int=1, step::Int=1, approx::Bool=false)
     GetAGC = approx ? ApproxAGC : ExactAGC
     T, ans = Int[], Float64[]
     d_sum = sum(d)
     for (i, u) in enumerate(ProgressBar(S))
         push!(T, u)
-        if i % step == 0
+        if i >= start && i % step == 0
             push!(ans, GetAGC(d, A, T, d_sum))
         end
     end
@@ -320,7 +320,7 @@ function PageRankSet(d::Vector{Float64}, A::SparseMatrixCSC{Float64,Int64}, K::I
     return copy(partialsortperm(ans, 1:K, rev=true))
 end
 
-function CompareEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, step::Int, approx::Bool, inc::Bool, overwrite::Bool)
+function CompareEffect(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, K::Int, start::Int, step::Int, approx::Bool, inc::Bool, overwrite::Bool)
     println("CompareEffect: Computing different algorithms...")
     agcseq = (overwrite == false && isfile(output_path)) ? TOML.parsefile(output_path) : Dict{AbstractString,Dict{AbstractString,Vector{Float64}}}()
     try
@@ -336,35 +336,35 @@ function CompareEffect(tot_d::AbstractDict; graph_indices::Vector{String}, outpu
                 println("Computing absorb set...")
                 S = AbsorbSet(d, sp_A, K; approx=true)
                 println("Computing AGC on absorb set...")
-                agcseq[graph_name]["Approx"] = AGCSeqs(d, sp_A, S, step, approx)
+                agcseq[graph_name]["Approx"] = AGCSeqs(d, sp_A, S, start, step, approx)
             end
 
             if !(inc && haskey(agcseq[graph_name], "Exact"))
                 println("Computing exact set...")
                 S = AbsorbSet(d, sp_A, K; approx=false)
                 println("Computing AGC on exact set...")
-                agcseq[graph_name]["Exact"] = AGCSeqs(d, sp_A, S, step, approx)
+                agcseq[graph_name]["Exact"] = AGCSeqs(d, sp_A, S, start, step, approx)
             end
 
             if !(inc && haskey(agcseq[graph_name], "Top-Absorb"))
                 println("Computing rank set...")
                 S = RankSet(d, sp_A, K)
                 println("Computing AGC on rank set...")
-                agcseq[graph_name]["Top-Absorb"] = AGCSeqs(d, sp_A, S, step, approx)
+                agcseq[graph_name]["Top-Absorb"] = AGCSeqs(d, sp_A, S, start, step, approx)
             end
 
             if !(inc && haskey(agcseq[graph_name], "Top-Degree"))
                 println("Computing degree set...")
                 S = DegreeSet(d, K)
                 println("Computing AGC on degree set...")
-                agcseq[graph_name]["Top-Degree"] = AGCSeqs(d, sp_A, S, step, approx)
+                agcseq[graph_name]["Top-Degree"] = AGCSeqs(d, sp_A, S, start, step, approx)
             end
 
             if !(inc && haskey(agcseq[graph_name], "Top-PageRank"))
                 println("Computing pagerank set...")
                 S = PageRankSet(d, sp_A, K)
                 println("Computing AGC on pagerank set...")
-                agcseq[graph_name]["Top-PageRank"] = AGCSeqs(d, sp_A, S, step, approx)
+                agcseq[graph_name]["Top-PageRank"] = AGCSeqs(d, sp_A, S, start, step, approx)
             end
         end
     finally
@@ -552,16 +552,49 @@ end
 
 const tot_d = TOML.parsefile("graphs.toml")
 
-BLAS.set_num_threads(16)
+BLAS.set_num_threads(10)
 
-ModelHK(tot_d;
+# ModelHK(tot_d;
+#     graph_indices=[
+#         "SmallHanoiExt",
+#         "Pseudofractal",
+#         "Koch",
+#         "CayleyTree",
+#         "HanoiExt",
+#     ],
+#     output_path="outputs/HK_model.toml",
+#     inc=true, overwrite=false
+# )
+
+# CompareOptimumEffect(tot_d;
+#     graph_indices=[
+#         "Zachary_karate_club",
+#         "Les_Miserables",
+#         "Contiguous_USA",
+#         "Zebra",
+#     ],
+#     output_path="outputs/compare_effects_optimum.toml",
+#     K=5, inc=true, overwrite=false
+# )
+
+CompareEffect(tot_d;
     graph_indices=[
-        "SmallHanoiExt",
-        "Pseudofractal",
-        "Koch",
-        "CayleyTree",
-        "HanoiExt",
+        "CA-GrQc",
+        "CA-HepTh",
+        "Euroroads",
+        "US_power_grid",
     ],
-    output_path="outputs/HK_model.toml",
-    inc=true, overwrite=false
+    output_path="outputs/compare_effects_exact1.toml",
+    K=50, start=10, step=5, approx=false, inc=true, overwrite=false
+)
+
+CompareEffect(tot_d;
+    graph_indices=[
+        "Sister_cities",
+        "Pretty_Good_Privacy",
+        "CA-HepPh",
+        "CA-AstroPh",
+    ],
+    output_path="outputs/compare_effects_exact2.toml",
+    K=50, start=10, step=5, approx=false, inc=true, overwrite=false
 )
