@@ -461,6 +461,47 @@ function TestHK(tot_d::AbstractDict; graph_indices::Vector{String}, output_path:
     end
 end
 
+function TestAGC(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, c_List::Vector{Int}, K::Int)
+    println("Executing tests on AGC...")
+    for graph_index in graph_indices
+        data = isfile(output_path) ? TOML.parsefile(output_path) : Dict()
+        graph_name = tot_d[graph_index]["name"]
+        if !haskey(data, graph_name)
+            data[graph_name] = Dict()
+        end
+        println("graph_name = $graph_name")
+        try
+            all_contains = true
+            for c in c_List
+                if !haskey(data[graph_name], string(c))
+                    all_contains = false
+                end
+            end
+            if all_contains
+                continue
+            end
+            d, sp_A = ReadGraph(tot_d[graph_index])
+            L = spdiagm(d) - sp_A
+            d_sum = sum(d)
+            println("Computing Exact Absorb Set...")
+            S_exact = AbsorbSet(d, sp_A, K; approx=false)
+            u = S_exact[begin]
+            agc_first = ExactAGC(d, sp_A, Int[u], d_sum)
+            std_margin = agc_first - ExactAGC(d, sp_A, S_exact, d_sum)
+            for c in c_List
+                if !haskey(data[graph_name], string(c))
+                    println("Computing Approx Absorb Set with c = $c...")
+                    S_approx = AbsorbSet(d, sp_A, K; approx=true, c=c)
+                    test_margin = agc_first - ExactAGC(d, sp_A, S_approx, d_sum)
+                    data[graph_name][string(c)] = (std_margin - test_margin) / std_margin
+                end
+            end
+        finally
+            open(io -> TOML.print(io, data), output_path, "w")
+        end
+    end
+end
+
 function ModelHK(tot_d::AbstractDict; graph_indices::Vector{String}, output_path::AbstractString, inc::Bool, overwrite::Bool)
     println("Computing Kemeny constant of model networks...")
     data = (overwrite == false && isfile(output_path)) ? TOML.parsefile(output_path) : Dict()
@@ -552,49 +593,26 @@ end
 
 const tot_d = TOML.parsefile("graphs.toml")
 
-BLAS.set_num_threads(10)
+BLAS.set_num_threads(12)
 
-# ModelHK(tot_d;
-#     graph_indices=[
-#         "SmallHanoiExt",
-#         "Pseudofractal",
-#         "Koch",
-#         "CayleyTree",
-#         "HanoiExt",
-#     ],
-#     output_path="outputs/HK_model.toml",
-#     inc=true, overwrite=false
-# )
-
-# CompareOptimumEffect(tot_d;
-#     graph_indices=[
-#         "Zachary_karate_club",
-#         "Les_Miserables",
-#         "Contiguous_USA",
-#         "Zebra",
-#     ],
-#     output_path="outputs/compare_effects_optimum.toml",
-#     K=5, inc=true, overwrite=false
-# )
-
-CompareEffect(tot_d;
+TestAGC(tot_d;
     graph_indices=[
-        "CA-GrQc",
-        "CA-HepTh",
+        "Jazz_musicians",
         "Euroroads",
-        "US_power_grid",
+        "Hamsterster_friends",
+        "Hamsterster_full",
+        # "ego-Facebook",
+        # "CA-GrQc",
+        # "US_power_grid",
+        # "Reactome",
+        # "Route_views",
+        # "CA-HepTh",
+        # "Sister_cities",
+        # "Pretty_Good_Privacy",
+        # "CA-HepPh",
+        # "CA-AstroPh",
+        # "CAIDA",
     ],
-    output_path="outputs/compare_effects_exact1.toml",
-    K=50, start=10, step=5, approx=false, inc=true, overwrite=false
-)
-
-CompareEffect(tot_d;
-    graph_indices=[
-        "Sister_cities",
-        "Pretty_Good_Privacy",
-        "CA-HepPh",
-        "CA-AstroPh",
-    ],
-    output_path="outputs/compare_effects_exact2.toml",
-    K=50, start=10, step=5, approx=false, inc=true, overwrite=false
+    output_path="outputs/agc_error.toml",
+    c_List=[10, 15, 25], K=10
 )

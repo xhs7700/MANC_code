@@ -16,7 +16,7 @@ pgf_preamble = "\n".join([
 ])
 
 plt.rcParams.update({
-    "figure.figsize": (7.5, 7.5),
+    "figure.figsize": (7.5, 5.5),
     "text.usetex": True,
     "font.family": "serif",
     "font.serif": "Times New Roman",
@@ -33,7 +33,7 @@ plt.rcParams.update({
     "lines.linewidth": 1.0,
     "legend.fancybox": False,
     "legend.framealpha": 1.0,
-    "legend.fontsize": 10.75,
+    "legend.fontsize": 10.5,
     "savefig.dpi": 1200,
 })
 
@@ -86,7 +86,7 @@ def compare_effects_optimum(toml_name: str,
         ax.set_xlabel(r'$k$')
         ax.set_ylabel(r'$H(S)$')
         ax.text(0.02, 0.03, d[i], transform=ax.transAxes, fontsize='x-large')
-        ax.legend(ncols=2, loc='upper right')
+        ax.legend(ncols=2, loc='upper right', fontsize=9.5)
     plt.savefig(path.join(output_dir, f'{toml_name}.pdf'), backend='pgf')
     plt.close(fig)
 
@@ -145,7 +145,7 @@ compare_effects(
         "Top-Absorb": r"\textsc{Top-Absorb}",
         "Top-PageRank": r"\textsc{Top-PageRank}",
         "Top-Degree": r"\textsc{Top-Degree}",
-    }, 'linear', 10, 5)
+    }, 'linear', 4, 4)
 
 compare_effects(
     "compare_effects_exact2", "outputs", "outputs", {
@@ -154,7 +154,7 @@ compare_effects(
         "Top-Absorb": r"\textsc{Top-Absorb}",
         "Top-PageRank": r"\textsc{Top-PageRank}",
         "Top-Degree": r"\textsc{Top-Degree}",
-    }, 'linear', 10, 5)
+    }, 'linear', 4, 4)
 
 # toml2dat("compare_effects_optimum", "outputs", "compare_effects/optimum",
 #          ["Exact", "Approx", "Optimum"])
