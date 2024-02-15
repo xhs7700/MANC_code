@@ -83,7 +83,7 @@ def compare_effects_optimum(toml_name: str,
                     marker=markers[j],
                     ms=markersizes[j])
         ax.set_yscale(scale_type)
-        ax.set_xlabel(r'$k$')
+        ax.set_xlabel(r'{Number of added vertices }$k$', fontsize=14)
         ax.set_ylabel(r'$H(S)$')
         ax.text(0.02, 0.03, d[i], transform=ax.transAxes, fontsize='x-large')
         ax.legend(ncols=2, loc='upper right', fontsize=9.5)
@@ -114,7 +114,7 @@ def compare_effects(toml_name: str,
                     marker=markers[j],
                     ms=markersizes[j])
         ax.set_yscale(scale_type)
-        ax.set_xlabel(r'$k$')
+        ax.set_xlabel(r'{Number of added vertices }$k$', fontsize=14)
         ax.set_ylabel(r'$H(S)$')
         ax.text(0.02, 0.03, d[i], transform=ax.transAxes, fontsize='x-large')
     fig.legend(
